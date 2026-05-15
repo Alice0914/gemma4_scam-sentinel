@@ -1,8 +1,32 @@
-# Scam Sentinel
+# Scam Sentinel — Stop the Next Victim
 
-> **This is not a final forensic deepfake detector. It is a multimodal scam risk assistant that combines phone call transcript analysis, conversation patterns, and verification workflows.**
+## TL;DR
 
-A hackathon submission for the **Gemma 4 Good Hackathon** (Main Track + Safety & Trust Impact Track). Scam Sentinel uses Gemma 4 as a *risk-situation reasoning engine* — not a classifier — to analyze suspicious calls, texts, emails, and image-based smishing in plain language a 70-year-old or 20-year-old can act on in 5 seconds.
+- **Scam Sentinel is an on-device panic-interruption system for scam prevention.**
+- It uses a **fine-tuned Gemma 4 E2B** model to analyze SMS, email, voice-call transcripts, and MMS image text **locally**.
+- When risk is high, it **takes over the full phone screen**, explains the danger in plain language, and triggers protective tools — blocking, trusted-contact alerts, callback verification, and a 2-minute wait timer.
+- The fine-tuned model achieves **98.0% precision** and reduces **false positives to 1.1%** on a 300-sample real-world evaluation set.
+- The goal is simple: **stop the user before they panic-click, panic-reply, or panic-send money.**
+
+> *"Scammers don't need your password. They need your panic."*
+> Scam Sentinel takes over the screen, slows the clock, and gives the user back the seconds they need to think.
+
+---
+
+## Why this wins — four dimensions in one project
+
+Scam Sentinel is built to satisfy **four winning frames simultaneously**, not pick one:
+
+| Dimension | What Scam Sentinel proves |
+|---|---|
+| 🎯 **Product impact** | Tackles a problem where older adults and vulnerable populations actually lose money — **$2.9 B from Americans 60+ in 2024 (FTC)**, **$10 B total**, **$1 T+ globally**. Targets the demographic least likely to install paid cloud protection. |
+| 🧠 **Technical depth** | QLoRA fine-tune of **Gemma 4 E2B** via Unsloth + TRL. Drives F1 from **58.0 → 86.1** and **FPR from 97.7% → 1.1%** vs. the same-size base — a **+28.1 F1 pt** gain and **88× FPR reduction** on a 300-sample real-world test set. Full reproducible pipeline: Colab L4 SFT → WSL2 merge → llama.cpp GGUF → Ollama Hub. |
+| 🛡️ **Safety & Trust** | **All analysis is on-device.** Sensitive messages, voice transcripts, emails, and image text never leave the phone. No cloud account, no API key, no signal required. Every verdict is grounded with the exact phrases that triggered it; limits are documented openly. |
+| 📱 **Real-world UX** | In a high-risk situation, Scam Sentinel does not show a small banner — it executes a **full-screen intervention** that physically replaces the scammer's call-to-action with the protective one (Hang up · Block sender · Notify family · 2-min wait timer). The interrupt is the product. |
+
+This is the **Gemma 4 Good Hackathon** submission for **Main Track + Safety & Trust Impact Track**, with concurrent eligibility for **Ollama**, **Unsloth**, and **llama.cpp** Special Technology Tracks.
+
+> **This is not a final forensic deepfake detector. It is a multimodal scam risk assistant that combines phone-call transcript analysis, conversation patterns, and verification workflows.**
 
 ---
 
