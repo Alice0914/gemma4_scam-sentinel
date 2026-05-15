@@ -1,0 +1,46 @@
+# Notebooks containing tokens or credentials
+finetune_gemma4_e2b.ipynb
+finetune_*.ipynb
+
+# Model weights and adapters
+models/
+*.safetensors
+*.bin
+*.gguf
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Data — raw and large files
+data/raw/
+data/vector_store/
+data/synthetic/raw.jsonl
+data/synthetic/raw_real.jsonl
+data/synthetic/combined.jsonl
+# Regeneratable via scripts/prepare_finetune_data.py (~61 MB, exceeds GitHub recommendation)
+data/synthetic/train_chat.jsonl
+
+# Logs and checkpoints
+*.log
+checkpoints/
+
+# Secrets / env
+.env
+.env.local
+.env.*.local
+
+# Build / framework caches
+unsloth_compiled_cache/
+
+# IDE / agent
+.vscode/
+.idea/
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

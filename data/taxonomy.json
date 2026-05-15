@@ -1,0 +1,70 @@
+{
+  "version": "1.0",
+  "categories": [
+    {
+      "id": "family_impersonation",
+      "label": "Family Impersonation",
+      "description": "Caller or sender claims to be a family member in distress, requesting urgent money transfer",
+      "primary_patterns": ["urgency", "impersonation", "secrecy", "phone_avoidance", "new_account"],
+      "typical_channels": ["sms", "voice"]
+    },
+    {
+      "id": "prosecutor_scam",
+      "label": "Prosecutor / Authority Scam",
+      "description": "Impersonates law enforcement, IRS, SSA, or government agency threatening arrest or account freeze",
+      "primary_patterns": ["urgency", "impersonation", "credential_request"],
+      "typical_channels": ["voice", "sms"]
+    },
+    {
+      "id": "bec_scam",
+      "label": "Business Email Compromise (BEC)",
+      "description": "Impersonates executive or colleague to redirect wire transfer or purchase gift cards",
+      "primary_patterns": ["urgency", "impersonation", "secrecy", "new_account"],
+      "typical_channels": ["email"]
+    },
+    {
+      "id": "romance_scam",
+      "label": "Romance Scam",
+      "description": "Builds emotional relationship online then requests money for emergencies, travel, or investment",
+      "primary_patterns": ["urgency", "impersonation", "phone_avoidance"],
+      "typical_channels": ["sms", "email"]
+    },
+    {
+      "id": "package_scam",
+      "label": "Package / Delivery Scam",
+      "description": "Impersonates courier (USPS, FedEx, DHL) claiming package held, requires small fee payment via phishing link",
+      "primary_patterns": ["urgency", "phishing_link", "impersonation"],
+      "typical_channels": ["sms"]
+    },
+    {
+      "id": "bank_phishing",
+      "label": "Bank / Financial Phishing",
+      "description": "Impersonates bank or financial service claiming account suspended or fraud detected, phishing link to fake login",
+      "primary_patterns": ["urgency", "impersonation", "phishing_link", "credential_request"],
+      "typical_channels": ["sms", "email"]
+    },
+    {
+      "id": "phishing_link",
+      "label": "Generic Phishing Link",
+      "description": "Fake prize, reward, or security alert pushing user to click a lookalike URL",
+      "primary_patterns": ["urgency", "phishing_link"],
+      "typical_channels": ["sms", "email"]
+    },
+    {
+      "id": "normal",
+      "label": "Normal / Benign",
+      "description": "Legitimate everyday messages that must NOT be flagged — control class to prevent false positives",
+      "primary_patterns": [],
+      "typical_channels": ["sms", "email", "voice"]
+    }
+  ],
+  "patterns": {
+    "urgency": "Pressure for immediate action with time constraint",
+    "impersonation": "Claims to be trusted entity via unknown channel",
+    "secrecy": "Asks user not to tell other family members or colleagues",
+    "phone_avoidance": "Refuses callback or discourages verification call",
+    "new_account": "Requests payment to a bank account not previously used",
+    "phishing_link": "Pushes user to click suspicious or lookalike URL",
+    "credential_request": "Asks for passwords, OTP, SSN, or account credentials"
+  }
+}

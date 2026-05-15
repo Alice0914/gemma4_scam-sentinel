@@ -1,0 +1,25 @@
+%% Scam Sentinel — Inference Flow (single-model)
+%% No cascade — every request goes straight to fine-tuned Gemma 4.
+flowchart TD
+    Input["📥 User input<br/>SMS · email · phone-call transcript"]
+
+    HasAudio{Has audio?}
+    Stt[["Whisper-base STT<br/>(audio → text + timestamps)"]]
+
+    Gemma[["Fine-tuned Gemma 4 E2B + QLoRA<br/>merged → Q4_K_M GGUF (3.2 GB)<br/>served via Ollama<br/>~3–8 s · F1 86.1% · FPR 1.1%"]]
+
+    JSON[/"📦 Structured JSON output<br/>{<br/>  risk_level,<br/>  patterns[],<br/>  user_message,<br/>  tool_calls[]<br/>}"/]
+
+    Action[["⚙️ Frontend renders verdict<br/>+ phone-screen takeover<br/>+ 12 tool actions"]]
+
+    Input --> HasAudio
+    HasAudio -- yes --> Stt --> Gemma
+    HasAudio -- no  --> Gemma
+    Gemma --> JSON --> Action
+
+    classDef gpu fill:#1e3a8a,color:#fff,stroke:#3b82f6
+    classDef decision fill:#7c2d12,color:#fff,stroke:#ea580c
+    classDef output fill:#064e3b,color:#fff,stroke:#10b981
+    class Stt,Gemma gpu
+    class HasAudio decision
+    class JSON,Action output

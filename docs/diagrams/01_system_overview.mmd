@@ -1,0 +1,47 @@
+%% Scam Sentinel — System Overview
+%% Single-model architecture: every request goes through fine-tuned Gemma 4
+%% (no cascade). Whisper handles STT for voice inputs.
+flowchart LR
+    subgraph CLIENT["🖥️ Client"]
+        direction TB
+        User["User"]
+        UI["iPhone emulator UI<br/>scenarios + result takeover"]
+        User --> UI
+    end
+
+    subgraph API["⚙️ FastAPI Backend"]
+        direction TB
+        EpText["/analyze/text"]
+        EpVoice["/analyze/voice_full<br/>(SHA-256 cached)"]
+        EpFeed["/feedback"]
+    end
+
+    subgraph PRE["🎤 Pre-processing"]
+        Whisper["Whisper-base STT<br/>142 MB · GPU"]
+    end
+
+    subgraph REASON["🧠 Reasoning (GPU)"]
+        Gemma["Fine-tuned Gemma 4 E2B + QLoRA<br/>merged → Q4_K_M GGUF · 3.2 GB<br/>served via Ollama (local)<br/>HF: Alice0914/gemma4-e2b-scam-sentinel<br/>12 tool-call schema"]
+    end
+
+    subgraph ACT["🛡️ Action Layer"]
+        Tools["12 Protective Tools<br/>6 verification + 6 channel defense"]
+    end
+
+    UI -->|"voice / SMS / email"| EpVoice
+    UI -->|"voice / SMS / email"| EpText
+    UI -.->|"👍 / 👎"| EpFeed
+
+    EpVoice --> Whisper --> Gemma
+    EpText --> Gemma
+    Gemma --> Tools --> UI
+
+    classDef gpu fill:#1e3a8a,color:#fff,stroke:#60a5fa,stroke-width:2px
+    classDef api fill:#3f3f46,color:#fff,stroke:#a1a1aa,stroke-width:1px
+    classDef action fill:#7c2d12,color:#fff,stroke:#fb923c,stroke-width:2px
+    classDef ui fill:#064e3b,color:#fff,stroke:#34d399,stroke-width:2px
+
+    class Whisper,Gemma gpu
+    class EpText,EpVoice,EpFeed api
+    class Tools action
+    class User,UI ui

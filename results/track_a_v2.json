@@ -1,0 +1,821 @@
+{
+  "model": "gemma4",
+  "metrics": {
+    "total": 70,
+    "accuracy": 0.714,
+    "precision": 0.692,
+    "recall": 1.0,
+    "f1": 0.818,
+    "false_positive_rate": 0.8,
+    "tp": 45,
+    "fp": 20,
+    "tn": 5,
+    "fn": 0,
+    "per_category": {
+      "family_impersonation": {
+        "accuracy": 1.0,
+        "total": 8
+      },
+      "prosecutor_scam": {
+        "accuracy": 1.0,
+        "total": 6
+      },
+      "bec_scam": {
+        "accuracy": 1.0,
+        "total": 5
+      },
+      "romance_scam": {
+        "accuracy": 1.0,
+        "total": 5
+      },
+      "bank_phishing": {
+        "accuracy": 1.0,
+        "total": 5
+      },
+      "phishing_link": {
+        "accuracy": 1.0,
+        "total": 8
+      },
+      "package_scam": {
+        "accuracy": 1.0,
+        "total": 4
+      },
+      "normal": {
+        "accuracy": 0.31,
+        "total": 29
+      }
+    }
+  },
+  "results": [
+    {
+      "id": "eval_001",
+      "true_label": "critical",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "Step-by-step thinking:\n\n1.  **Analyze the content:** The message claims to be from someone who had a car accident and needs immediate money ($1,500) for hospital bills.\n2.  **Identify red flags/scam indicators:**\n    *   **Urgency:** The request is immediate (\"I need money right now\"). Scammers use "
+    },
+    {
+      "id": "eval_002",
+      "true_label": "critical",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "prosecutor_scam",
+      "raw_output": "**Step 1: Analyze the input.**\nThe user has provided a transcript of a communication claiming to be from the IRS, demanding immediate payment of $2,400 for alleged tax issues, and threatening arrest if payment is not made within a short timeframe.\n\n**Step 2: Identify red flags/indicators of fraud.**"
+    },
+    {
+      "id": "eval_003",
+      "true_label": "critical",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "bec_scam",
+      "raw_output": "**Step 1: Analyze the input.**\nThe user has provided an email text claiming to be from a high-level executive, requesting an urgent wire transfer to a new vendor account.\n\n**Step 2: Identify red flags/indicators of fraud.**\n1.  **Urgency/Time Pressure:** \"I'm in a meeting\" implies the recipient must"
+    },
+    {
+      "id": "eval_004",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "romance_scam",
+      "raw_output": "REASONING:\n1.  **Analyze the content:** The message claims to be from someone returning home after deployment and requests money ($1,800) to clear a fee.\n2.  **Identify red flags:**\n    *   **Unexpected request for money:** A sudden, large request for money, especially from someone claiming to be in"
+    },
+    {
+      "id": "eval_005",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "bank_phishing",
+      "raw_output": "Step 1: Analyze the input.\nThe message is an SMS claiming to be from a bank (implied by the nature of the alert) regarding an account lock due to suspicious activity.\nKey elements:\n1. **Urgency/Threat:** \"Account locked,\" \"suspicious activity.\"\n2. **Action Required:** Click a link (implied by the na"
+    },
+    {
+      "id": "eval_006",
+      "true_label": "critical",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "Step-by-step thinking:\n1.  **Analyze the message content:** The message claims the sender (presumably a family member) is in trouble (police station) and needs immediate money ($3000) for bail.\n2.  **Identify red flags:**\n    *   **Urgency/Crisis:** Creating a high-stakes, immediate crisis (arrest/b"
+    },
+    {
+      "id": "eval_007",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "{\n  \"tool_calls\": [\n    {\n      \"function\": \"call_tool\",\n      \"args\": {\n        \"tool_name\": \"analyze_suspicious_message\",\n        \"tool_input\": {\n          \"message\": \"CONGRATULATIONS! You have been selected to receive a free iPhone 15 Pro. To claim your prize, click this link: [link]. Please prov"
+    },
+    {
+      "id": "eval_008",
+      "true_label": "critical",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "prosecutor_scam",
+      "raw_output": "**Step 1: Analyze the input and identify key elements.**\nThe message claims to be from a government agency (\"Department of Homeland Security\") and alleges illegal activity (\"investigation\"). It demands immediate action (\"must act\") and threatens severe consequences (\"seize all assets\"). It instructs"
+    },
+    {
+      "id": "eval_009",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "package_scam",
+      "raw_output": "Step-by-step thinking:\n1.  **Analyze the message content:** The message claims to be from a shipping company (implied by \"FedEx\" or similar, though the text just says \"FedEx\") and states that a package is held due to an issue requiring payment.\n2.  **Identify red flags:**\n    *   **Unexpected paymen"
+    },
+    {
+      "id": "eval_010",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "bec_scam",
+      "raw_output": "Step-by-step thinking:\n1.  **Analyze the content:** The message asks the recipient to purchase gift cards ($500 total) for a professional purpose (\"client thank you\").\n2.  **Identify red flags:**\n    *   **Request for money/goods:** Asking the recipient to spend their own money.\n    *   **Urgency/Im"
+    },
+    {
+      "id": "eval_011",
+      "true_label": "critical",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "Step-by-step thinking:\n1.  **Analyze the message content:** The message claims to be from \"Emma,\" stating she is in trouble (arrested) and needs immediate money ($5,000) for bail.\n2.  **Identify red flags:**\n    *   **Urgency/Crisis:** The situation is presented as an immediate, high-stakes emergenc"
+    },
+    {
+      "id": "eval_012",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "bank_phishing",
+      "raw_output": "Step 1: Analyze the input.\nThe user has received an email claiming that their PayPal account has been limited.\nThe email demands immediate action to restore access.\nIt asks for sensitive personal information (implied by the need to \"verify identity\") and directs the user to a suspicious link (`paypa"
+    },
+    {
+      "id": "eval_013",
+      "true_label": "medium",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "Step 1: Analyze the input.\nThe message claims the user's Netflix account payment failed and provides a link (`netflix-payment.com`) to update billing information. This is a common phishing tactic.\n\nStep 2: Identify red flags.\n1.  **Urgency/Threat:** \"Payment failed\" creates immediate panic, forcing "
+    },
+    {
+      "id": "eval_014",
+      "true_label": "critical",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "romance_scam",
+      "raw_output": "***⚠️ EXTREME WARNING: THIS IS A CLASSIC ADVANCE FEE SCAM (OR ROMANCE SCAM VARIANT) ⚠️***\n\nThis message uses emotional manipulation, urgency, and the promise of a large payout to trick you into sending money. **Do not respond to this message, and do not send any money for any reason.**\n\n---\n\n### 🚩 R"
+    },
+    {
+      "id": "eval_015",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "prosecutor_scam",
+      "raw_output": "REASONING:\n1.  **Analyze the message content:** The message claims the recipient missed jury duty and demands immediate payment ($750) via a phone call to avoid arrest.\n2.  **Identify red flags:**\n    *   **Urgency/Threat:** Uses high-pressure tactics (\"arrest,\" \"immediately\").\n    *   **Payment Dem"
+    },
+    {
+      "id": "eval_016",
+      "true_label": "high",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "**Step 1: Analyze the input and identify key risk indicators.**\nThe message contains several high-risk indicators:\n1.  **Urgency/Emotional Appeal:** The situation implies an immediate, stressful need (\"I had an accident\").\n2.  **Financial Request:** A direct request for money ($900).\n3.  **Secrecy/I"
+    },
+    {
+      "id": "eval_017",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "bank_phishing",
+      "raw_output": "Step 1: Analyze the input.\nThe message is an SMS alert claiming to be from a bank (implied by the nature of the alert and the use of account details). It warns of a suspicious transaction and provides a link to resolve it.\n\nStep 2: Identify red flags/suspicious elements.\n1.  **Urgency/Fear Tactic:**"
+    },
+    {
+      "id": "eval_018",
+      "true_label": "critical",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "bec_scam",
+      "raw_output": "**⚠️ HIGHLY SUSPICIOUS / LIKELY SCAM (Business Email Compromise - BEC)**\n\nThis email exhibits multiple classic indicators of a Business Email Compromise (BEC) scam. The goal of this type of scam is to trick the recipient into wiring money under the guise of a legitimate, time-sensitive corporate tra"
+    },
+    {
+      "id": "eval_019",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "REASONING:\n1.  **Identify the core threat:** The message claims unauthorized access (\"accessed from Romania\") and demands immediate action (\"If this was not you\"). This creates urgency.\n2.  **Analyze the link/URL:** The message contains a link (implied by the context of such scams) leading to a susp"
+    },
+    {
+      "id": "eval_020",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "package_scam",
+      "raw_output": "Step 1: Analyze the input.\nThe message is an SMS claiming to be from a postal service regarding a failed delivery. It demands action (payment) via a link/process implied by the message structure, and uses urgency (\"failed delivery,\" \"must act\").\n\nStep 2: Identify red flags.\n1. **Urgency/Threat:** Im"
+    },
+    {
+      "id": "eval_021",
+      "true_label": "high",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "romance_scam",
+      "raw_output": "REASONING:\n1.  **Analyze the content:** The message is highly emotional (\"I cannot bear to lose contact\"), urgent, and requests money (\"send $80\").\n2.  **Identify red flags:**\n    *   **Emotional manipulation:** Using intense emotional language to bypass critical thinking.\n    *   **Urgency/Scarcity"
+    },
+    {
+      "id": "eval_022",
+      "true_label": "critical",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "prosecutor_scam",
+      "raw_output": "{\n  \"analysis\": {\n    \"risk_level\": \"High\",\n    \"reasoning\": \"This message uses extreme urgency ('final warning', 'within 24 hours') and threats of immediate, severe consequences ('arrested', 'warrant') to panic the recipient into immediate action. This is a classic social engineering tactic used by"
+    },
+    {
+      "id": "eval_023",
+      "true_label": "high",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "**Step 1: Analyze the input against known threat indicators.**\nThe message claims to be from a known contact (\"Mom\") but exhibits several high-risk indicators:\n1.  **Urgency/Crisis:** The sender claims to be in a crisis situation (mugged).\n2.  **Financial Request:** The sender immediately requests m"
+    },
+    {
+      "id": "eval_024",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "Step 1: Analyze the input.\nThe input is an email claiming the user is eligible for a $250 reward from Costco. It provides a link (`costco-reward.com/verify`) and urges immediate action due to an expiration deadline.\n\nStep 2: Identify red flags/suspicious elements.\n1.  **Unsolicited Offer/Urgency:** "
+    },
+    {
+      "id": "eval_025",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "bank_phishing",
+      "raw_output": "Step 1: Analyze the input.\nThe message is an SMS claiming to be from a financial institution (implied by the nature of the alert) regarding a suspicious transaction. It directs the user to click a link (implied by the context of such messages) or visit a specific website to resolve the issue.\n\nStep "
+    },
+    {
+      "id": "eval_026",
+      "true_label": "critical",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "```json\n{\n  \"text\": \"This is a high-risk scam attempt. The message uses emotional manipulation, urgency, and secrecy to trick the recipient into sending money. The key red flags are the immediate need for cash, the request for secrecy, and the vague emergency situation.\",\n  \"risk_level\": \"High\",\n  \""
+    },
+    {
+      "id": "eval_027",
+      "true_label": "high",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "bec_scam",
+      "raw_output": "REASONING:\n1.  **Identify Red Flags:** The message contains several high-risk indicators:\n    *   **Urgency:** \"Need to process... today.\"\n    *   **Financial Request:** A large sum of money ($34,000) needs to be transferred.\n    *   **Circumvention of Protocol:** \"Do not use the usual system.\" (Imp"
+    },
+    {
+      "id": "eval_028",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "package_scam",
+      "raw_output": "Step 1: Analyze the input.\nThe message is an SMS claiming to be from a shipping company (implied by the context of customs/delivery) requiring payment for customs clearance via a link.\n\nStep 2: Identify red flags.\n1.  **Unexpected Payment Request:** Legitimate customs/shipping processes usually invo"
+    },
+    {
+      "id": "eval_029",
+      "true_label": "high",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "romance_scam",
+      "raw_output": "REASONING:\n1.  **Analyze the content:** The message claims to be from someone in distress (\"I had a road accident\") and requests money (\"I need help\").\n2.  **Identify red flags:**\n    *   **Urgency/Emotional Manipulation:** The use of an emergency scenario (accident) is a classic tactic to bypass cr"
+    },
+    {
+      "id": "eval_030",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "Step 1: Analyze the input.\nThe message claims the user's Instagram account is in violation and provides a link (`instagram.com/account-violation-appeal`) that directs to a suspicious-looking URL structure. It creates a sense of urgency (\"account-violation-appeal\") and demands immediate action.\n\nStep"
+    },
+    {
+      "id": "eval_031",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"is_safe\": true,\n  \"reasoning\": \"The message is a casual, personal request for a ride. It contains no links, financial requests, or indicators of phishing or malicious activity. No security action is required.\",\n  \"action_taken\": \"None\"\n}\n```"
+    },
+    {
+      "id": "eval_032",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "Step 1: Analyze the input.\nThe message is a casual update from someone who is running late for a planned meeting/dinner. It contains no requests for money, credentials, or sensitive information.\n\nStep 2: Determine the risk level.\nThe risk is extremely low. It is a simple status update.\n\nStep 3: Form"
+    },
+    {
+      "id": "eval_033",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "Based on the text provided, this appears to be a **routine, personal request for funds** from a known contact (\"Dad\").\n\n**Security Assessment:**\n*   **Risk Level:** Low.\n*   **Indicators:** The message is direct, specifies an amount ($40), and provides a reason (groceries). It does not contain typic"
+    },
+    {
+      "id": "eval_034",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "Step 1: Analyze the input.\nThe input is an email reminder about a meeting (\"Don't forget...\"). It specifies the meeting topic, time, and location.\n\nStep 2: Check for red flags (scam indicators).\n*   **Urgency/Threat:** None. It's a standard reminder.\n*   **Financial Request:** None.\n*   **Suspicious"
+    },
+    {
+      "id": "eval_035",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "{\n  \"thought\": \"The user message is a casual social invitation. It does not contain any elements of financial urgency, impersonation, or suspicious requests. Therefore, the risk level is low, and no security actions are necessary. The response should be neutral and acknowledge the message content.\","
+    },
+    {
+      "id": "eval_036",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "Step 1: Analyze the input.\nThe message is a reminder for a dentist appointment, providing a date/time and a phone number for confirmation.\n\nStep 2: Check for red flags (scam indicators).\n1. **Urgency/Threat:** None. It's a standard reminder.\n2. **Financial Request:** None. It only asks the recipient"
+    },
+    {
+      "id": "eval_037",
+      "true_label": "safe",
+      "predicted": "high",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "**Assessment: High Potential for Phishing/Scam**\n\nWhile this message appears to be a legitimate notification from Amazon, **you should treat any unsolicited tracking link with extreme caution.** These types of messages are extremely common phishing scams designed to trick you into clicking a malicio"
+    },
+    {
+      "id": "eval_038",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "**Indicators:**\n*   **Professional Tone:** The language is appropriate for a workplace setting.\n*   **Clear Call to Action:** The sender clearly asks for feedback before a specific deadline (Thursday).\n*   **Implied Attachment:** The message relies on an attached document for the core content.\n\n**Ri"
+    },
+    {
+      "id": "eval_039",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "Step-by-step thinking:\n\n1.  **Analyze the input:** The message is \"I love you.\" It is a simple, affectionate statement.\n2.  **Check for red flags/suspicious elements:**\n    *   Is there a request for money? No.\n    *   Is there a request for personal information (passwords, SSN)? No.\n    *   Is ther"
+    },
+    {
+      "id": "eval_040",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "Based on the text provided, this message appears to be a **routine, informational update** for a team meeting.\n\nThere are no signs of phishing, requests for money, or demands for sensitive personal information. It seems to be a standard internal communication.\n\n**Verdict: Safe.**"
+    },
+    {
+      "id": "eval_041",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "This message appears to be a routine, personal request and does not contain any signs of phishing, scams, or security threats. It is safe to respond to normally."
+    },
+    {
+      "id": "eval_042",
+      "true_label": "safe",
+      "predicted": "high",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "Step 1: Analyze the input.\nThe input is a text message: \"Your prescription is ready. Your prescription is ready. Your prescription is ready. Your prescription is ready. Your prescription is ready. Your prescription is ready. Your prescription is ready. Your prescription is ready. Your prescription i"
+    },
+    {
+      "id": "eval_043",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "Step 1: Analyze the input.\nThe input is an email message: \"Hi [Recipient Name], I hope you are doing well. I wanted to follow up on our meeting last week regarding the Q3 marketing strategy. I have attached the initial draft of the proposal we discussed. Please take a look when you have a moment and"
+    },
+    {
+      "id": "eval_044",
+      "true_label": "safe",
+      "predicted": "critical",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "This message appears to be a standard, automated flight notification from an airline.\n\n**However, because this format is frequently used by scammers, you should always treat unsolicited messages like this with caution.**\n\n### ⚠️ Safety Advice:\n\n1.  **Do NOT click any links** if this message had incl"
+    },
+    {
+      "id": "eval_045",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "**Safety Assessment:** Safe\n\n**Reasoning:**\nThis message is a standard, informational notification regarding a ride-sharing service. It does not contain any links, requests for personal information, or demands for payment. It appears to be a legitimate service update.\n\n**Action Recommended:** None. "
+    },
+    {
+      "id": "eval_046",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "**Safety Assessment:** Safe\n\n**Analysis:**\nThis message is a generic, friendly greeting. It contains no links, no requests for money, and no urgent demands for personal information. It poses no security risk.\n\n**Recommendation:**\nNo action is required. You can treat this message as a genuine, well-i"
+    },
+    {
+      "id": "eval_047",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "Step 1: Analyze the input.\nThe message is: \"TEXT: Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, Mom, "
+    },
+    {
+      "id": "eval_048",
+      "true_label": "safe",
+      "predicted": "high",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "REASONING:\n1.  **Analyze the content:** The message requests a transfer of $200 for rent, citing a temporary cash flow issue.\n2.  **Identify red flags:**\n    *   **Urgency/Pressure:** The need for rent money creates immediate pressure.\n    *   **Payment Method:** Asking for money via a specific, non"
+    },
+    {
+      "id": "eval_049",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": ""
+    },
+    {
+      "id": "eval_050",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "Step 1: Analyze the input.\nThe input is a simple informational message regarding a local event (a water main break) and provides a suggestion for an alternative route.\n\nStep 2: Determine the risk level and category.\nThis message is purely informational and advisory. It does not request money, creden"
+    },
+    {
+      "id": "eval_051",
+      "true_label": "low",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "Step 1: Analyze the input.\nThe message is an SMS claiming that a car's warranty is expiring and urges the recipient to call a specific number immediately to extend it.\n\nStep 2: Identify potential red flags.\n1. **Urgency/Fear Tactic:** The use of \"expiring\" and the immediate call to action (\"Call us "
+    },
+    {
+      "id": "eval_052",
+      "true_label": "low",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "{\n  \"analysis\": {\n    \"risk_level\": \"High\",\n    \"reasoning\": \"This message exhibits classic phishing characteristics. It offers unsolicited, high-value financial opportunities ('pre-approved loan') and creates a sense of urgency ('Limited time offer'). The request to reply directly to the email is a"
+    },
+    {
+      "id": "eval_053",
+      "true_label": "medium",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "Step 1: Analyze the input.\nThe message is an SMS claiming to be from T-Mobile regarding a past-due bill. It provides a link (`t-mobile-pay.com`) and implies immediate action is required to avoid service interruption.\n\nStep 2: Identify red flags.\n1.  **Urgency/Threat:** The message creates a sense of"
+    },
+    {
+      "id": "eval_054",
+      "true_label": "low",
+      "predicted": "medium",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "Step 1: Analyze the input.\nThe user received a text message advertising a used item (iPhone) and providing a price. This is a common classified ad or spam message.\n\nStep 2: Determine the risk level and category.\nThe message itself is not inherently malicious (it's just an ad), but it is unsolicited "
+    },
+    {
+      "id": "eval_055",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "Step 1: Analyze the input.\nThe input is an email notification claiming the user's LinkedIn account is at risk and requires immediate action via a provided link.\n\nStep 2: Identify red flags.\n1.  **Urgency/Threat:** The message implies immediate action is needed (\"...must verify your account immediate"
+    },
+    {
+      "id": "eval_056",
+      "true_label": "low",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "Step 1: Analyze the input.\nThe message is a reminder about a mortgage payment due. It directs the user to log in to an account to pay.\n\nStep 2: Identify potential risks.\nThis message mimics a legitimate financial institution communication (a payment reminder). The risk is phishing—tricking the user "
+    },
+    {
+      "id": "eval_057",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "bank_phishing",
+      "raw_output": "Step 1: Analyze the input.\nThe message is an SMS claiming a pending transaction/verification for $500, directing the user to click a link (implied by the context of verification/action) or interact with the message. The domain mentioned is suspicious, and the context is urgent financial action.\n\nSte"
+    },
+    {
+      "id": "eval_058",
+      "true_label": "high",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "**Step 1: Analyze the input.**\nThe message is a request for money ($600) from a person claiming to be in a hospital. It includes several high-risk indicators:\n1.  **Urgency/Crisis:** Implies an immediate, emergency situation (hospital).\n2.  **Financial Request:** Asks for money to be sent immediatel"
+    },
+    {
+      "id": "eval_059",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "prosecutor_scam",
+      "raw_output": "Step 1: Analyze the message content.\nThe message claims the user's Medicare account has been flagged for fraud and demands immediate action by calling a specific number. This is a classic pattern of a phishing or vishing (voice phishing) scam.\n\nStep 2: Identify red flags.\n1. **Urgency/Threat:** The "
+    },
+    {
+      "id": "eval_060",
+      "true_label": "high",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "romance_scam",
+      "raw_output": "Step-by-step analysis:\n1.  **Analyze the content:** The message claims the sender has secured a job/opportunity abroad and needs money ($1,100) to cover visa/processing fees. This is a classic \"advance fee fraud\" or \"romance scam\" pattern.\n2.  **Identify red flags:**\n    *   **Request for money:** T"
+    },
+    {
+      "id": "eval_061",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "Step 1: Analyze the input.\nThe input is a casual, conversational message (\"Hey, did you see the game last night?\"). It contains no financial requests, no urgent demands, and no suspicious links or account details.\n\nStep 2: Determine the risk level.\nThe risk level is extremely low. The message is pur"
+    },
+    {
+      "id": "eval_062",
+      "true_label": "safe",
+      "predicted": "critical",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "Step 1: Analyze the input.\nThe user has provided an email snippet: \"Please review the attached [document]. Please sign it electronically using this link: [link]. Please let me know if you have any questions.\"\nThe context is a request to review and sign a document via a provided link.\n\nStep 2: Identi"
+    },
+    {
+      "id": "eval_063",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "{\n  \"analysis\": {\n    \"patterns_detected\": [\n      \"delivery_notification\"\n    ],\n    \"risk_level\": \"Low\",\n    \"explanation\": \"This message appears to be a standard, expected delivery notification from a known service (DoorDash). It contains no suspicious elements, financial requests, or urgent dema"
+    },
+    {
+      "id": "eval_064",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "Step 1: Analyze the input.\nThe message is a notification from a supposed medical office regarding an appointment reschedule. It provides a phone number for confirmation.\n\nStep 2: Check for red flags.\n1.  **Urgency/Pressure:** Low. It's a simple notification.\n2.  **Suspicious Links/Requests:** None. "
+    },
+    {
+      "id": "eval_065",
+      "true_label": "safe",
+      "predicted": "high",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "Step 1: Analyze the input.\nThe input is an SMS message containing a 6-digit code and instructions regarding its use.\n\nStep 2: Determine the risk level and context.\nThis message format is highly characteristic of Multi-Factor Authentication (MFA) codes. While legitimate services send these, they are "
+    },
+    {
+      "id": "eval_066",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "REASONING:\n1.  **Analyze the content:** The message claims the user's PC is infected with viruses and provides a phone number and a suspicious URL.\n2.  **Identify red flags:**\n    *   **Urgency/Fear:** Creating panic (\"infected,\" \"virus\") to force immediate action.\n    *   **Suspicious URL:** The UR"
+    },
+    {
+      "id": "eval_067",
+      "true_label": "critical",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "prosecutor_scam",
+      "raw_output": "**Step 1: Analyze the input.**\nThe user has received a voice call claiming to be from law enforcement (Sheriff's office) demanding immediate payment ($1,500) via gift cards/iTunes to avoid arrest.\n\n**Step 2: Identify red flags/indicators of fraud.**\n1. **Authority Impersonation:** Impersonating law "
+    },
+    {
+      "id": "eval_068",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "bec_scam",
+      "raw_output": "REASONING:\n1.  **Identify the core request:** The message asks the recipient to update payment details for a large sum of money ($52,000) based on a new invoice.\n2.  **Analyze the context:** This is a common social engineering tactic known as \"Business Email Compromise\" (BEC) or invoice fraud.\n3.  *"
+    },
+    {
+      "id": "eval_069",
+      "true_label": "medium",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "package_scam",
+      "raw_output": "Step 1: Analyze the message content.\nThe message claims that a package is being held and requires payment ($18.50) via a link to clear customs. This is a common pattern for advance-fee scams.\n\nStep 2: Identify red flags.\n1. **Unexpected communication:** The user did not initiate this inquiry.\n2. **P"
+    },
+    {
+      "id": "eval_070",
+      "true_label": "critical",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "Step-by-step thinking:\n1.  **Analyze the message content:** The message claims to be from a grandchild (\"granddaughter\") who is in trouble abroad (\"accident,\" \"passport\"). It demands immediate money ($4,000) and asks the recipient to keep it secret (\"don't tell anyone\").\n2.  **Identify red flags/sca"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+%% Scam Sentinel — Self-Improving Cascade
+%% Two feedback loops that update the system over time.
+flowchart LR
+    User[["👤 User<br/>👍 / 👎 on each verdict"]]
+
+    Store[("data/user_feedback.jsonl<br/>append-only event log")]
+
+    subgraph LoopA["Loop A — Constitutional Self-Critique"]
+        direction TB
+        A1[/"Daily trigger<br/>(or manual)"/]
+        A2[["Gemma 4 reads all<br/>false-alarm cases"]]
+        A3[["Proposes new<br/>system_prompt.md"]]
+        A4{"A/B vs<br/>300-sample eval"}
+        A5[/"Promote if<br/>F1 ≥ AND FPR <"/]
+        A6[("backend/prompts/<br/>system_prompt.md")]
+
+        A1 --> A2 --> A3 --> A4
+        A4 -- pass --> A5 --> A6
+        A4 -- fail --> A1
+    end
+
+    subgraph LoopB["Loop B — DPO Preference Tuning"]
+        direction TB
+        B1[/"Manual / weekly trigger<br/>(once enough 👍 + 👎 accumulate)"/]
+        B2[["scripts/build_dpo_pairs.py<br/>false_alarm → chosen=safe<br/>correct(≥med) → rejected=silence"]]
+        B3[["scripts/train_dpo.py<br/>WSL2 GPU · TRL DPOTrainer<br/>+ Unsloth PatchDPOTrainer<br/>β=0.1 · lr=5e-6 · LoRA r=16"]]
+        B4{"300-sample eval<br/>F1 ↑ AND FPR ↓?"}
+        B5[/"merge + GGUF + ollama create<br/>(same pipeline as SFT)"/]
+        B6[("models/gemma4-e2b-scam-dpo<br/>→ Ollama gemma4-scam:dpo")]
+
+        B1 --> B2 --> B3 --> B4
+        B4 -- pass --> B5 --> B6
+        B4 -- fail --> B1
+    end
+
+    Result[["⚡ Production cascade<br/>uses updated artifacts<br/>(prompt + adapter)"]]
+
+    User --> Store
+    Store -->|"false alarms"| A1
+    Store -->|"preference pairs"| B1
+    A6 --> Result
+    B6 --> Result
+
+    classDef store fill:#0c4a6e,color:#fff,stroke:#0284c7
+    classDef ok fill:#064e3b,color:#fff,stroke:#10b981
+    classDef decision fill:#7c2d12,color:#fff,stroke:#ea580c
+    class Store,A6,B6 store
+    class Result,A5,B5 ok
+    class A4,B4 decision

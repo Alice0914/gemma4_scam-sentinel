@@ -1,0 +1,821 @@
+{
+  "model": "gemma3:4b +RAG",
+  "metrics": {
+    "total": 70,
+    "accuracy": 0.886,
+    "precision": 0.878,
+    "recall": 0.956,
+    "f1": 0.915,
+    "false_positive_rate": 0.24,
+    "tp": 43,
+    "fp": 6,
+    "tn": 19,
+    "fn": 2,
+    "per_category": {
+      "family_impersonation": {
+        "accuracy": 1.0,
+        "total": 8
+      },
+      "prosecutor_scam": {
+        "accuracy": 1.0,
+        "total": 6
+      },
+      "bec_scam": {
+        "accuracy": 1.0,
+        "total": 5
+      },
+      "romance_scam": {
+        "accuracy": 1.0,
+        "total": 5
+      },
+      "bank_phishing": {
+        "accuracy": 0.8,
+        "total": 5
+      },
+      "phishing_link": {
+        "accuracy": 0.875,
+        "total": 8
+      },
+      "package_scam": {
+        "accuracy": 1.0,
+        "total": 4
+      },
+      "normal": {
+        "accuracy": 0.793,
+        "total": 29
+      }
+    }
+  },
+  "results": [
+    {
+      "id": "eval_001",
+      "true_label": "critical",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"new_account\", \"phone_avoidance\"],\n  \"user_message\": \"This call is a classic grandparent scam. The caller is impersonating a hospital nurse and requesting an urgent $1,500 payment for a fabricated surgery. This is a very co"
+    },
+    {
+      "id": "eval_002",
+      "true_label": "critical",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "prosecutor_scam",
+      "raw_output": "usstsein: This input is a classic IRS/law enforcement impersonation scam. It combines several high-risk patterns.\n\n```json\n{\n  \"risk_level\": \"critical\",\n  \"patterns\": [\"impersonation\", \"urgency\", \"secrecy\", \"payment\"],\n  \"user_message\": \"This message is a sophisticated IRS/law enforcement impersonat"
+    },
+    {
+      "id": "eval_003",
+      "true_label": "critical",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "bec_scam",
+      "raw_output": "randomNumber = 42\n\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"secrecy\", \"new_account\", \"phone_avoidance\"],\n  \"user_message\": \"This email is a highly suspicious Business Email Compromise (BEC) attempt. The sender is impersonating an executive, demanding an urgent wi"
+    },
+    {
+      "id": "eval_004",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "romance_scam",
+      "raw_output": "viszont\n\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"phone_avoidance\", \"new_account\"],\n  \"user_message\": \"This message is a highly suspicious romance scam attempting to exploit the vulnerability of individuals who are emotionally invested in a relationship with some"
+    },
+    {
+      "id": "eval_005",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "bank_phishing",
+      "raw_output": "\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"impersonation\", \"phishing_link\", \"urgency\"],\n  \"user_message\": \"This SMS message is a highly sophisticated and dangerous scam mimicking Wells Fargo. Do NOT click the link! Banks NEVER lock accounts and demand immediate verification via a link in an"
+    },
+    {
+      "id": "eval_006",
+      "true_label": "critical",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"secrecy\", \"new_account\"],\n  \"user_message\": \"This message is a highly suspicious scam mimicking a police situation. The caller is impersonating a law enforcement officer and demanding immediate cash for bail. This is a cla"
+    },
+    {
+      "id": "eval_007",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"impersonation\", \"phishing_link\"],\n  \"user_message\": \"This SMS message is a classic phishing scam. It’s pretending to be Apple and offering a free iPhone 15 Pro to lure you into clicking a link.  Never click links from unsolicited messages, especially"
+    },
+    {
+      "id": "eval_008",
+      "true_label": "critical",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "prosecutor_scam",
+      "raw_output": "accesible, and the user can easily understand the response.\n```json\n{\n  \"risk_level\": \"critical\",\n  \"patterns\": [\"impersonation\", \"urgency\", \"secrecy\", \"new_account\", \"credential_request\"],\n  \"user_message\": \"This message is a sophisticated and extremely dangerous impersonation scam mimicking the De"
+    },
+    {
+      "id": "eval_009",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "package_scam",
+      "raw_output": "鱈魚の骨を噛み砕くような、不快な経験をしました。\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"impersonation\", \"phishing_link\", \"urgency\"],\n  \"user_message\": \"This SMS message is a classic FedEx scam. The message impersonates FedEx and demands payment for a fabricated customs processing fee. Clicking the link will lead"
+    },
+    {
+      "id": "eval_010",
+      "true_label": "high",
+      "predicted": "low",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "bec_scam",
+      "raw_output": "<unused1033>ǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠǠ"
+    },
+    {
+      "id": "eval_011",
+      "true_label": "critical",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "🛋️ ANALYSIS:\n\nThis input presents a highly concerning scenario exhibiting multiple red flags characteristic of sophisticated fraud attempts. The combination of a fabricated emergency, a demand for immediate funds, secrecy instructions, and a claim of texting from a stranger’s phone strongly suggests"
+    },
+    {
+      "id": "eval_012",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "bank_phishing",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"impersonation\", \"phishing_link\", \"credential_request\", \"urgency\"],\n  \"user_message\": \"This email is a sophisticated phishing attempt designed to steal your PayPal account and funds. Do NOT click the link provided. PayPal will NEVER ask for your full "
+    },
+    {
+      "id": "eval_013",
+      "true_label": "medium",
+      "predicted": "low",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "浇水的时候，要浇透，不要只浇表面。"
+    },
+    {
+      "id": "eval_014",
+      "true_label": "critical",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "romance_scam",
+      "raw_output": "γ```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"secrecy\", \"new_account\"],\n  \"user_message\": \"This email is a highly suspicious romance scam. The request for a large sum of money ($380,000) transferred from Nigeria before the government seizes it is a classic tactic use"
+    },
+    {
+      "id": "eval_015",
+      "true_label": "high",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "prosecutor_scam",
+      "raw_output": "\n```json\n{\n  \"risk_level\": \"critical\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"secrecy\", \"new_account\"],\n  \"user_message\": \"This text message is a sophisticated and dangerous scam designed to pressure you into sending money. It mimics a legal notice from the federal court system, claiming "
+    },
+    {
+      "id": "eval_016",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"secrecy\", \"phone_avoidance\", \"new_account\"],\n  \"user_message\": \"This message is a highly suspicious scam attempting to exploit a vulnerable grandparent. The caller is impersonating a driver involved in an accident and dema"
+    },
+    {
+      "id": "eval_017",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "bank_phishing",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"impersonation\", \"phishing_link\", \"credential_request\"],\n  \"user_message\": \"This SMS message is a sophisticated phishing attempt. Chase Bank does not typically communicate about suspicious transactions via SMS. The link chase-fraud-dispute.com/review "
+    },
+    {
+      "id": "eval_018",
+      "true_label": "critical",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "bec_scam",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"new_account\", \"secrecy\"],\n  \"user_message\": \"This email exhibits multiple high-risk characteristics indicative of a Business Email Compromise (BEC) scam. The request for an immediate $234,000 wire transfer, coupled with in"
+    },
+    {
+      "id": "eval_019",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "jazdy\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"impersonation\", \"phishing_link\", \"urgency\", \"credential_request\"],\n  \"user_message\": \"This SMS message is a sophisticated phishing attempt designed to steal your Google account credentials. It mimics a legitimate Google security alert, creating"
+    },
+    {
+      "id": "eval_020",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "package_scam",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"impersonation\", \"phishing_link\", \"urgency\"],\n  \"user_message\": \"This SMS message is a phishing scam mimicking the United States Postal Service (USPS). The message attempts to trick you into paying a redelivery fee by directing you to a fraudulent web"
+    },
+    {
+      "id": "eval_021",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "romance_scam",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"phone_avoidance\", \"new_account\"],\n  \"user_message\": \"This message is a classic grandparent scam. The urgency and emotional language ('I cannot bear to go a day without hearing from you') are designed to manipulate you into"
+    },
+    {
+      "id": "eval_022",
+      "true_label": "critical",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "prosecutor_scam",
+      "raw_output": "itext: This is a recorded message from the Social Security Administration. Your Social Security number has been suspended due to suspicious activity. Press 1 now to speak with an officer or a warrant will be issued for your arrest within 24 hours. This is your final notification.\nMETADATA: {\"channel"
+    },
+    {
+      "id": "eval_023",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"new_account\", \"phone_avoidance\"],\n  \"user_message\": \"This message is highly suspicious and likely a grandparent scam. The victim is being pressured to send money urgently due to a fabricated emergency. The use of a new pho"
+    },
+    {
+      "id": "eval_024",
+      "true_label": "medium",
+      "predicted": "error",
+      "true_scam": true,
+      "pred_scam": false,
+      "correct": false,
+      "correct_binary": false,
+      "category": "phishing_link",
+      "raw_output": "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"
+    },
+    {
+      "id": "eval_025",
+      "true_label": "high",
+      "predicted": "error",
+      "true_scam": true,
+      "pred_scam": false,
+      "correct": false,
+      "correct_binary": false,
+      "category": "bank_phishing",
+      "raw_output": "HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=300)"
+    },
+    {
+      "id": "eval_026",
+      "true_label": "critical",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "pch\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"phone_avoidance\", \"new_account\"],\n  \"user_message\": \"This voice message exhibits several red flags indicative of a grandparent scam. The urgency, claim of being 'in trouble,' request for immediate withdrawal, and instr"
+    },
+    {
+      "id": "eval_027",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "bec_scam",
+      "raw_output": "<unused4106>翻译：分析此输入：\n\n文本：我需要你处理供应商付款。我们常规的支付系统因维护而关闭。在今天下午3点之前，通过以下账户汇款34,000美元。此笔款已获批准。不要通过采购部门处理这笔款项。已附上详细信息。\n元数据：{\"channel\": \"email\"}\n\n类似过往案例（用于参考，非训练）：\n[案例 1] 孤儿商人浪漫诈骗案，2024\n  摘要：一位丧偶的商人通过 Match.com 与人约会，需要帮助解决“出口业务紧急情况”：向关闭交易后偿还的 15,000 美元贷款。在交易关闭前建立了 4 个月的情感关系。模式：紧迫性、冒名顶替、新账户\n  结果：受害者汇入了 15,0"
+    },
+    {
+      "id": "eval_028",
+      "true_label": "medium",
+      "predicted": "low",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "package_scam",
+      "raw_output": "<unused2955>"
+    },
+    {
+      "id": "eval_029",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "romance_scam",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"phone_avoidance\", \"new_account\"],\n  \"user_message\": \"This email exhibits several red flags indicative of a romance scam. The victim is experiencing extreme emotional distress and requesting a large sum of money under dures"
+    },
+    {
+      "id": "eval_030",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"impersonation\", \"phishing_link\", \"urgency\"],\n  \"user_message\": \"This SMS message is a classic phishing scam designed to panic you into visiting a fake website. Instagram does not contact users via SMS about account flags or potential suspensions. The"
+    },
+    {
+      "id": "eval_031",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "<unused476>l_level: \"safe\"\npatterns: []\nuser_message: \"This appears to be a normal message from a parent to their child regarding soccer practice pickup. No warning signs detected.\"\ntool_calls: []"
+    },
+    {
+      "id": "eval_032",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "侙\n```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [\"urgency\"],\n  \"user_message\": \"This appears to be a normal message from a family member describing a traffic delay. The urgency is typical for a situation like this. No warning signs detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_033",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "<unused2065>️️️️️️️️️️️️️️️️️️️️️️️️️️️️️️️"
+    },
+    {
+      "id": "eval_034",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This is a standard work announcement regarding a meeting. No suspicious activity detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_035",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This is a normal social invitation. It's a friendly message about a birthday party with no suspicious elements.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_036",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "<unused3873>翻译：分析此输入：\n\n文本：提醒：您的牙医预约定于星期二上午10点安排。请至少提前24小时致电555-0182确认或更改预约。\n元数据：{\"channel\": \"sms\"}\n\n参考案例（用于参考，而不是训练）：\n[案例 1] 牙医预约提醒，2024\n  摘要：牙医办公室发送了自动提醒，预约明天，包括办公室电话号码以确认或取消。标准业务提醒，已知发送者。模式：\n  结果：合法提醒。没有欺诈活动。\n[案例 2] 医生预约跟进，2024\n  摘要：医生办公室致电跟进测试结果，留下了带有网站上电话号码的回音信息。电子邮件中的电话号码指向骗子。通过拨打电子邮件中的电话号码而不是合"
+    },
+    {
+      "id": "eval_037",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This is a standard Amazon shipping notification. It provides information about the expected delivery of a package and directs the user to the Amazon app for tracking. No suspicious activity detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_038",
+      "true_label": "safe",
+      "predicted": "medium",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "Nonprofit finance director received email from apparent grant foundation: 'Update your ACH information to receive your $50,000 grant disbursement'. New account captured funds. Patterns: impersonation, new_account, urgency\n  Outcome: $50,000 grant routed to fraudulent account.\n```json\n{\n  \"risk_level"
+    },
+    {
+      "id": "eval_039",
+      "true_label": "safe",
+      "predicted": "low",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "նշանակում է, որ ցույց է տալիս, որ ցույց է տալիս, որ ցույց է տալիս, որ ցույց է տալիս, որ ցույց է տալիս, որ ցույց է տալիս, որ ցույց է տալիս, որ ցույց է տալիս, որ ցույց է տալիս, որ ցույց է տալիս, որ ցույց է տալիս, որ ցույց է տալիս, որ ցույց է տալիս, որ ցույց է տալիս, որ ցույց է տալիս, որ ցույց է տալիս,"
+    },
+    {
+      "id": "eval_040",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "轺사 1\n```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This is a normal work communication regarding a meeting schedule change. No warning signs detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_041",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This is a normal, friendly message requesting assistance with errands. No warning signs detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_042",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "<unused3082>\n```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This is a standard pharmacy notification for prescription pickup. It provides store hours and a contact number for questions. No suspicious activity detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_043",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This appears to be a standard follow-up email regarding a business proposal. No suspicious activity detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_044",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This is a standard flight information update sent via SMS. It provides details about a flight boarding schedule. No suspicious activity detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_045",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This is a standard Uber arrival notification. It provides information about the driver and estimated arrival time. No suspicious activity detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_046",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This is a friendly birthday message. It contains no suspicious elements or requests for information. It's a normal, positive interaction.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_047",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "successivement.\n```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This appears to be a normal message from a child explaining a situation with a dead phone battery and an upcoming arrival. No warning signs detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_048",
+      "true_label": "safe",
+      "predicted": "high",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "俸:\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"new_account\"],\n  \"user_message\": \"This message is exhibiting high-risk behavior. The request for an immediate $200 wire transfer due to a delayed paycheck is a classic tactic used in scams. The offer to repay Friday is a common attempt "
+    },
+    {
+      "id": "eval_049",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This is a standard bank statement notification from Chase. It directs you to log in to your account at chase.com to view your statement. No suspicious activity detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_050",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This is a normal alert about a traffic incident. It provides helpful information about a road closure and suggests an alternate route. No warning signs detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_051",
+      "true_label": "low",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "懂了。\n\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"phishing_link\", \"new_account\"],\n  \"user_message\": \"This text message is a classic car warranty scam. The urgency and claim of an expiring warranty are designed to pressure you into action. The provided link is almost "
+    },
+    {
+      "id": "eval_052",
+      "true_label": "low",
+      "predicted": "low",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "<unused2331>"
+    },
+    {
+      "id": "eval_053",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"phishing_link\"],\n  \"user_message\": \"This SMS message is a common scam called a 'bill shock' scam. T-Mobile does not typically send urgent payment reminders via SMS with links to external websites. The message is attempting"
+    },
+    {
+      "id": "eval_054",
+      "true_label": "low",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"impersonation\", \"new_account\", \"urgency\"],\n  \"user_message\": \"This message is highly suspicious and likely a scam. Selling a used phone for $350 is a common tactic used by scammers to build trust and then request money. The request to meet locally "
+    },
+    {
+      "id": "eval_055",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"impersonation\", \"phishing_link\", \"credential_request\"],\n  \"user_message\": \"This email is a sophisticated phishing attempt. LinkedIn does not typically send messages threatening account restrictions and requiring immediate verification via a link. T"
+    },
+    {
+      "id": "eval_056",
+      "true_label": "low",
+      "predicted": "medium",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"risk_level\": \"medium\",\n  \"patterns\": [\"urgency\", \"credential_request\"],\n  \"user_message\": \"This message is a standard mortgage payment reminder, but the instruction to 'log in to your account' is a potential red flag. While it may be legitimate, it's a common tactic used by scammers to "
+    },
+    {
+      "id": "eval_057",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "bank_phishing",
+      "raw_output": "columnwidth\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"phishing_link\", \"credential_request\", \"new_account\"],\n  \"user_message\": \"This SMS message is a highly suspicious Zelle scam. It mimics a legitimate bank notification to pressure you into verifying a fraudulent "
+    },
+    {
+      "id": "eval_058",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "abbr:\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"phone_avoidance\", \"new_account\"],\n  \"user_message\": \"This text message is highly suspicious and likely a scam. The caller is impersonating a family member in a stressful situation, attempting to quickly obtain money."
+    },
+    {
+      "id": "eval_059",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "prosecutor_scam",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"credential_request\", \"secrecy\"],\n  \"user_message\": \"This SMS message is a classic Medicare fraud scam. The urgency and threat of benefits suspension are designed to pressure you into providing sensitive information. Scamme"
+    },
+    {
+      "id": "eval_060",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "romance_scam",
+      "raw_output": "ocasião:\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"new_account\", \"phone_avoidance\"],\n  \"user_message\": \"This email exhibits several red flags indicative of a sophisticated romance scam combined with a fraudulent financial request. The urgency, coupled with the dem"
+    },
+    {
+      "id": "eval_061",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "összefoglaló:\n```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This appears to be a normal conversation between friends about a sporting event. No suspicious activity detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_062",
+      "true_label": "safe",
+      "predicted": "high",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"impersonation\", \"phishing_link\", \"credential_request\"],\n  \"user_message\": \"This email is highly suspicious and likely a phishing attempt. While it appears to be from a colleague, requesting a digital signature via DocuSign and a link to a potentially"
+    },
+    {
+      "id": "eval_063",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [\"urgent\"],\n  \"user_message\": \"This is a standard delivery notification from DoorDash. It provides information about your order and directs you to track it in the app. No suspicious activity detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_064",
+      "true_label": "safe",
+      "predicted": "safe",
+      "true_scam": false,
+      "pred_scam": false,
+      "correct": true,
+      "correct_binary": true,
+      "category": "normal",
+      "raw_output": "வனுக்கு、\n```json\n{\n  \"risk_level\": \"safe\",\n  \"patterns\": [],\n  \"user_message\": \"This appears to be a standard communication from a medical office regarding a rescheduled appointment. No suspicious activity detected.\",\n  \"tool_calls\": []\n}\n```"
+    },
+    {
+      "id": "eval_065",
+      "true_label": "safe",
+      "predicted": "medium",
+      "true_scam": false,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": false,
+      "category": "normal",
+      "raw_output": "```json\n{\n  \"risk_level\": \"medium\",\n  \"patterns\": [\"phishing_link\"],\n  \"user_message\": \"This message is a common phishing attempt. While it claims to be from your bank, it's crucial to *never* click on links in suspicious SMS messages. Banks will *never* ask you to verify your account details or ent"
+    },
+    {
+      "id": "eval_066",
+      "true_label": "high",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "phishing_link",
+      "raw_output": "нэт\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"phishing_link\", \"new_account\"],\n  \"user_message\": \"This SMS message is a highly suspicious scam attempting to exploit your fear and urgency. Microsoft does not typically send security alerts via SMS. The link is likely"
+    },
+    {
+      "id": "eval_067",
+      "true_label": "critical",
+      "predicted": "critical",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": true,
+      "correct_binary": true,
+      "category": "prosecutor_scam",
+      "raw_output": "⋘ ⋙\n\n```json\n{\n  \"risk_level\": \"critical\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"secrecy\", \"new_account\"],\n  \"user_message\": \"This message is a sophisticated and dangerous scam attempting to extort money by impersonating law enforcement. The urgency, secrecy, and demand for immediate payment v"
+    },
+    {
+      "id": "eval_068",
+      "true_label": "high",
+      "predicted": "low",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "bec_scam",
+      "raw_output": "Yuki, let's analyze this email. It appears to be a Business Email Compromise (BEC) attempt, similar to the previous cases.\n\nHere's the breakdown:\n\n*   **Impersonation:** The email claims to be from a \"partner\" – a common tactic in BEC scams.\n*   **New Banking Details:** The request for updated banki"
+    },
+    {
+      "id": "eval_069",
+      "true_label": "medium",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "package_scam",
+      "raw_output": "⼈類：\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"impersonation\", \"phishing_link\", \"urgency\"],\n  \"user_message\": \"This SMS message is a classic customs scam. The sender is impersonating a legitimate shipping company (likely FedEx or UPS) to trick you into paying a fake import tax. The link 'cust"
+    },
+    {
+      "id": "eval_070",
+      "true_label": "critical",
+      "predicted": "high",
+      "true_scam": true,
+      "pred_scam": true,
+      "correct": false,
+      "correct_binary": true,
+      "category": "family_impersonation",
+      "raw_output": "晩御影を消すために、このメッセージを分析します。\n\n```json\n{\n  \"risk_level\": \"high\",\n  \"patterns\": [\"urgency\", \"impersonation\", \"secrecy\", \"new_account\"],\n  \"user_message\": \"This message is a highly suspicious and likely fraudulent attempt to exploit a grandparent's trust. The urgency, combined with claims of a car accident"
+    }
+  ]
+}
