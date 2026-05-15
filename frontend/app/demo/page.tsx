@@ -106,10 +106,11 @@ const TEXT_SCENARIOS: Record<Exclude<ScenarioKey, "live_call">, TextScenario> = 
     emoji: "📷",
     channel: "sms",
     text:
-      "[Image attached] FedEx-track.xyz/parcel — Delivery failed. Open the attached image to confirm address and pay $2.99 customs fee within 24 hours.",
+      "Hi, your FedEx package couldn't be delivered. Tap the image to confirm your address and pay the $2.99 customs fee before it gets returned.",
     metadata: {
-      image_extracted_text:
-        "FedEx Notice: Your package #FX482109 could not be delivered due to incomplete address. Confirm details and pay $2.99 customs fee at FedEx-track.xyz/parcel within 24 hours or your package will be returned to sender.",
+      // Real PNG served from frontend/public/sample_mms/ — pytesseract reads
+      // text out of THIS image at scan time (no hardcoded extracted text).
+      image_url: "/sample_mms/fedex_scam.png",
       image_source: "mms_attachment",
       from_number: "+1 (888) 555-0193",
     },
@@ -802,26 +803,43 @@ function formatTime(seconds: number): string {
 // Text-channel scenario view (SMS / Email / MMS)
 // ─────────────────────────────────────────────────────────────────────────────
 
-type TextPhase = "incoming" | "opening" | "scanning" | "result" | "error";
+type TextPhase = "incoming" | "opening" | "preview" | "scanning" | "result" | "error";
 
 function TextScenarioView({ scenario }: { scenario: TextScenario }) {
   const [phase, setPhase] = useState<TextPhase>("incoming");
   const [analysis, setAnalysis] = useState<AgentOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // For image scenarios: "Not now" dismisses the Sentinel modal and reveals the
+  // full chat thread + unblurred image so the user can see what they declined.
+  const [modalDismissed, setModalDismissed] = useState(false);
 
   // Reset to incoming whenever the scenario changes
   useEffect(() => {
     setPhase("incoming");
     setAnalysis(null);
     setError(null);
+    setModalDismissed(false);
   }, [scenario.key]);
 
+  const imageUrl = scenario.metadata?.image_url
+    ? String(scenario.metadata.image_url)
+    : null;
+
   async function openAndScan() {
-    setPhase("opening");
-    // Briefly show "opening message" before going into full-screen scan
-    setTimeout(() => setPhase("scanning"), 500);
     setAnalysis(null);
     setError(null);
+    setPhase("opening");
+
+    // Image MMS scenarios pause at a "preview" phase so the user can see the
+    // image + caption text and explicitly tap "Scan this image" — which then
+    // routes through the real /analyze/image endpoint (pytesseract OCR).
+    // Pure text scenarios go straight from opening → scanning → /analyze/text.
+    if (imageUrl) {
+      setTimeout(() => setPhase("preview"), 500);
+      return;
+    }
+
+    setTimeout(() => setPhase("scanning"), 500);
     try {
       const res = await fetch(`${BACKEND}/analyze/text`, {
         method: "POST",
@@ -845,10 +863,42 @@ function TextScenarioView({ scenario }: { scenario: TextScenario }) {
     }
   }
 
+  async function scanImage() {
+    if (!imageUrl) return;
+    setPhase("scanning");
+    setAnalysis(null);
+    setError(null);
+    try {
+      const imgRes = await fetch(imageUrl);
+      if (!imgRes.ok) throw new Error(`Could not load image: HTTP ${imgRes.status}`);
+      const blob = await imgRes.blob();
+      const filename = imageUrl.split("/").pop() || "mms_attachment.png";
+
+      const formData = new FormData();
+      formData.append("image", new File([blob], filename, { type: blob.type || "image/png" }));
+
+      const res = await fetch(`${BACKEND}/analyze/image`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`Backend ${res.status}: ${txt.slice(0, 200)}`);
+      }
+      const data: AgentOutput = await res.json();
+      setAnalysis(data);
+      setPhase("result");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setPhase("error");
+    }
+  }
+
   function reset() {
     setPhase("incoming");
     setAnalysis(null);
     setError(null);
+    setModalDismissed(false);
   }
 
   const channelIcon =
@@ -923,6 +973,114 @@ function TextScenarioView({ scenario }: { scenario: TextScenario }) {
             </div>
           )}
 
+          {/* Phase 2b — iMessage-style chat thread (background) + center modal asking the user to scan.
+              "Not now" dismisses the modal and reveals the full chat thread with the unblurred image. */}
+          {phase === "preview" && imageUrl && (
+            <>
+              {/* Background: chat thread. When the modal is up the image is
+                  blurred (Sentinel hides it for safety); when the user picks
+                  "Not now" the blur drops so they can see the full message. */}
+              <div className="absolute inset-0 flex flex-col bg-white animate-in fade-in duration-200">
+                <div className="pt-9 px-3 pb-2 flex items-center border-b border-gray-200 bg-gray-50">
+                  {modalDismissed && (
+                    <button
+                      type="button"
+                      onClick={reset}
+                      className="text-blue-600 text-[11px] hover:underline px-1"
+                      aria-label="Back to inbox"
+                    >
+                      ← Inbox
+                    </button>
+                  )}
+                  <div className="flex-1 flex flex-col items-center">
+                    <div className="w-9 h-9 rounded-full bg-gray-300 flex items-center justify-center text-base mb-1">
+                      👤
+                    </div>
+                    <div className="text-[10px] font-semibold text-gray-900">
+                      {senderLabel}
+                    </div>
+                    <div className="text-[9px] text-gray-500">Not in your contacts</div>
+                  </div>
+                  {modalDismissed && <span className="w-10" /> /* spacer to keep header centered */}
+                </div>
+                <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+                  <div className="flex justify-start">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imageUrl}
+                      alt="MMS attachment"
+                      className={`max-w-[230px] max-h-[300px] object-contain rounded-2xl border border-gray-200 bg-gray-100 ${
+                        modalDismissed ? "" : "blur-md"
+                      }`}
+                    />
+                  </div>
+                  <div className="flex justify-start">
+                    <div className="max-w-[80%] bg-gray-200 text-gray-900 rounded-2xl rounded-tl-md px-3 py-2 text-[12px] leading-snug whitespace-pre-wrap">
+                      {scenario.text}
+                    </div>
+                  </div>
+                  {modalDismissed && (
+                    <div className="text-[9px] text-gray-400 text-center pt-1">
+                      Delivered · now
+                    </div>
+                  )}
+                </div>
+                {modalDismissed && (
+                  <div className="px-3 pb-4 pt-2 border-t border-gray-200 bg-gray-50 flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={scanImage}
+                      className="w-full py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-[12px] font-semibold"
+                    >
+                      🛡️ Scan with Scam Sentinel
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Center modal — only when not yet dismissed */}
+              {!modalDismissed && (
+                <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+                  <div className="mx-4 w-[240px] bg-white rounded-2xl shadow-2xl p-3 text-center">
+                    <div className="text-[10px] uppercase tracking-widest text-emerald-600 mb-2">
+                      🛡️ Scam Sentinel
+                    </div>
+
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imageUrl}
+                      alt="MMS attachment preview"
+                      className="w-full max-h-[180px] object-contain rounded-lg border border-gray-200 bg-gray-50 mb-2"
+                    />
+
+                    <div className="text-[12px] font-semibold text-gray-900 mb-1">
+                      Image from an unsaved number
+                    </div>
+                    <div className="text-[10px] text-gray-600 leading-snug mb-3 px-1">
+                      {senderLabel} isn't in your contacts. Scan this image for scam patterns before opening?
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setModalDismissed(true)}
+                        className="flex-1 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-[11px] font-medium"
+                      >
+                        Not now
+                      </button>
+                      <button
+                        type="button"
+                        onClick={scanImage}
+                        className="flex-1 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-semibold"
+                      >
+                        OK, scan
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
           {/* Phase 3 — Scanning takeover */}
           {phase === "scanning" && (
             <div className="absolute inset-0 z-40 bg-gradient-to-b from-blue-950 via-indigo-950 to-black backdrop-blur-md flex flex-col items-center justify-center px-5 py-10 animate-in fade-in duration-300">
@@ -930,12 +1088,22 @@ function TextScenarioView({ scenario }: { scenario: TextScenario }) {
                 🛡️ Scam Sentinel
               </div>
               <div className="text-base font-bold text-white text-center leading-snug mb-1">
-                {channelLabel} from an unsaved sender
+                {imageUrl ? "MMS image from unknown" : `${channelLabel} from an unsaved sender`}
               </div>
               <div className="text-[11px] text-blue-200/90 text-center mb-8 px-2">
-                We need to check this before you act.
-                <br />
-                Running fine-tuned Gemma 4 E2B…
+                {imageUrl ? (
+                  <>
+                    Running pytesseract OCR…
+                    <br />
+                    then fine-tuned Gemma 4 E2B.
+                  </>
+                ) : (
+                  <>
+                    We need to check this before you act.
+                    <br />
+                    Running fine-tuned Gemma 4 E2B…
+                  </>
+                )}
               </div>
 
               {/* Animated scanning spinner */}
@@ -1323,3 +1491,4 @@ function ResultTakeover({
     </div>
   );
 }
+

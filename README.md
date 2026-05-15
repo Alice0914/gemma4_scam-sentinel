@@ -19,6 +19,59 @@ A hackathon submission for the **Gemma 4 Good Hackathon** (Main Track + Safety &
 
 ---
 
+## Architecture at a glance
+
+![Scam Sentinel system overview](docs/diagrams/Scam_Sentinel_System_Overview.png)
+
+### How a single request flows
+
+1. **Client (iPhone emulator UI)** — the user receives an SMS, email, MMS image, or live phone call inside the in-browser phone shell. Six pre-built scenarios cover the common scam shapes (BEC wire, Chase phish, USPS smishing, image smishing, normal family message, live audio call).
+2. **FastAPI backend** routes the request to the right endpoint:
+   - `POST /analyze/text` — SMS / email
+   - `POST /analyze/image` — MMS image (runs `pytesseract` OCR on the upload first)
+   - `POST /analyze/voice_full` — full call audio, SHA-256 cached so re-runs of the same clip are instant
+   - `POST /feedback` — async 👍 / 👎 event log for the Self-Improving Cascade
+3. **Pre-processing** — for voice, Whisper-base STT (≈ 150 MB) transcribes audio → text + per-sentence timestamps. It stays loaded on the same GPU as the reasoner so there is no model swap cost.
+4. **Reasoning (GPU)** — every request lands on **the same model**: fine-tuned Gemma 4 E2B + QLoRA, merged into the base and quantized to Q4_K_M GGUF (3.2 GB), served locally via Ollama as `gemma4-scam`. F1 86.1% / FPR 1.1% on the 300-sample real test set. No Stage 1 / Stage 2 cascade.
+5. **Action Layer — 12 protective tools** — the model emits structured JSON containing `risk_level`, `patterns[]`, a plain-language `user_message`, and a curated subset of 12 tool calls (6 verification + 6 channel defense). The frontend renders each tool's outcome alongside the phone-screen takeover.
+6. **Feedback path** — every verdict gets a 👍 / 👎 button. Events stream back to `/feedback` and feed the Self-Improving Cascade below.
+
+All five steps run on the user's local GPU. No cloud inference, no transcript or message leaves the machine at demo time — the privacy stance is the deployment shape, not a promise.
+
+---
+
+## How it learns from feedback (Self-Improving Cascade)
+
+![Self-Improving Cascade — feedback loops](docs/diagrams/Self_improving_Cascade.png)
+
+Every 👍 / 👎 event is appended to `data/user_feedback.jsonl`. Two independent loops consume that store and produce promotable artifacts. **Both loops gate every promotion behind the same 300-sample real evaluation set**, so a regression never reaches production.
+
+### Loop A — Constitutional Self-Critique *(prompt-level)*
+
+Operates at the prompt layer; no retraining required, so the turnaround is hours not days.
+
+1. **Trigger** — daily cron, or manual via `python scripts/self_critique.py`.
+2. **Review** — Gemma 4 reads every recent `false_alarm` event and identifies which prompt rule each one violated.
+3. **Propose** — emits a revised `backend/prompts/system_prompt.md` (typically a tightening of the SAFE-by-default rule or a new always-safe category).
+4. **A/B gate** — both the current and proposed prompts run against `data/evaluation/eval_set.jsonl` (300 hand-labeled samples).
+5. **Promote** — only if F1 does not regress AND FPR stays under the locked threshold. Promoted artifact: `backend/prompts/system_prompt.md`.
+
+### Loop B — DPO Preference Tuning *(weights-level)*
+
+Operates on the model weights themselves; produces a new LoRA adapter when enough feedback has accumulated.
+
+1. **Trigger** — manual / weekly, once enough 👍 + 👎 events have accumulated to make a meaningful training set.
+2. **Build preference pairs** — `scripts/build_dpo_pairs.py` converts the feedback log into (prompt, chosen, rejected) triples:
+   - `false_alarm` → **rejected** = the over-flagged response, **chosen** = a synthesized SAFE response. Teaches: stop yelling on normal messages.
+   - `correct` with risk ≥ medium → **chosen** = the correct flagged response, **rejected** = synthesized "missed it" silence. Teaches: stop going silent on real scams.
+3. **Train DPO adapter** — `scripts/train_dpo.py` runs in WSL2 on the GPU using `trl.DPOTrainer` + Unsloth's `PatchDPOTrainer()` for the fast kernels (β = 0.1, lr = 5e-6, LoRA r = 16, starting from the published SFT adapter).
+4. **Evaluation gate** — same 300-sample real test set. Promote only if F1 ↑ AND FPR ↓.
+5. **Ship** — merge LoRA → bf16 safetensors → GGUF f16 → Q4_K_M, then `ollama create gemma4-scam:dpo` (identical pipeline to the initial SFT deployment in [§Deploying the fine-tuned model](#deploying-the-fine-tuned-model-qlora--ollama)).
+
+The two loops are deliberately decoupled: Loop A can ship fixes within hours when a new scam category emerges, while Loop B accumulates volume and ships a stronger model on a slower cadence.
+
+---
+
 ## What it does
 
 For every suspicious input, Scam Sentinel answers four questions:
@@ -88,7 +141,7 @@ Every Gemma 4 verdict at risk ≥ medium triggers a curated subset of these 12 t
 
 - **Model**: Fine-tuned Gemma 4 E2B + QLoRA (`gemma4-scam`, Q4_K_M GGUF via Ollama) with system prompt v3 (SAFE-by-default rule)
 - **Architecture**: Single-model — every request goes straight to the fine-tuned model (no Stage 1 cascade). The earlier `gemma3:4b` triage stage was retired after the QLoRA model reached F1 86.1% / FPR 1.1% on its own.
-- **RAG**: ChromaDB index of 117 real FTC/APWG cases wired but **off by default** — the 300-sample evaluation showed RAG hurt on conversational ham (see Findings). Re-enabled per-request only via `rag_retriever` injection.
+- **RAG**: ChromaDB index of 117 real FTC/APWG cases wired but **off by default** — the 300-sample evaluation showed RAG hurt on conversational ham (see Findings). Enabling it requires both setting `SCAM_SENTINEL_RAG=1` at startup *and* a built `data/vector_store/` index; `agent.analyze(..., use_rag=False)` is the API-level default. `GET /health` reports the live state.
 - **Self-consistency**: 3-run majority vote available (disabled by default for demo speed)
 - **Output cleaning**: User-facing `user_message` runs through a server-side cleaner that strips code fences, unpacks malformed JSON the model occasionally emits, and removes hallucinated non-Latin script characters.
 - **Inference fallback**: Rule-based tool inference if the model omits `tool_calls` from JSON
@@ -170,22 +223,80 @@ Same 300-sample real evaluation set, no RAG, identical v3 system prompt. The thr
 
 ---
 
-## Run locally
+## Quickstart — run the full demo locally
+
+The fine-tuned model is published on Ollama Hub, so you do **not** have to re-train or convert anything. Five commands from a clean clone get you to a working demo.
+
+### Hardware
+
+| Component | Spec used in development | Minimum to run the demo |
+|---|---|---|
+| **GPU** | NVIDIA RTX 4060 Ti, 8 GB VRAM | 8 GB VRAM NVIDIA (consumer card OK). CPU-only Ollama works but Gemma 4 inference falls to ~30–60 s per request. |
+| **RAM** | 32 GB | 16 GB recommended (Whisper + Ollama + Node dev server) |
+| **Disk** | — | ~5 GB free (3.2 GB model + dependencies) |
+| **OS** | Windows 11 (host) + WSL2 Ubuntu (training only) | Windows / macOS / Linux all work for the demo runtime. Training/merging requires Linux. |
+
+### Software prerequisites
+
+| Tool | Why | Install |
+|---|---|---|
+| **Ollama** | serves the fine-tuned `alicek0914/gemma4-scam` model | https://ollama.com/download |
+| **Python ≥ 3.11** | FastAPI backend + Whisper STT | https://www.python.org/downloads/ |
+| **Node.js ≥ 20** | Next.js frontend | https://nodejs.org |
+| **Tesseract** *(optional, for image OCR demo)* | `pytesseract` Python wrapper drives this binary | Win: https://github.com/UB-Mannheim/tesseract/wiki · macOS: `brew install tesseract` · Linux: `apt install tesseract-ocr` |
+
+### Five-command quickstart
 
 ```bash
-# 1. Backend (assumes Ollama is running with gemma4-scam pulled — see "Deploying the fine-tuned model" below)
+# 1. Pull the fine-tuned model (3.2 GB Q4_K_M GGUF, hosted on Ollama Hub)
+ollama pull alicek0914/gemma4-scam
+
+# 2. Clone the repo
+git clone https://github.com/Alice0914/gemma4_scam-sentinel.git
+cd gemma4_scam-sentinel
+
+# 3. Backend deps + start FastAPI on :8000
 pip install -r backend/requirements.txt
-uvicorn backend.main:app --reload
+uvicorn backend.main:app --host 0.0.0.0 --port 8000
 
-# 2. Build RAG index (one-time, after curating data/rag_cases.jsonl)
-python backend/rag.py
+# 4. (new terminal) Frontend deps + start Next.js on :3000
+cd frontend && npm install && npm run dev
 
-# 3. Frontend
-cd frontend
-npm install
-npm run dev
-# Open http://localhost:3000
+# 5. Open http://localhost:3000/demo
 ```
+
+The repo references the model as `gemma4-scam`. If you pulled it under the namespaced name, alias it locally:
+
+```bash
+ollama cp alicek0914/gemma4-scam gemma4-scam
+```
+
+That's it — `/demo` route loads the iPhone emulator with six built-in scenarios (BEC wire, Chase phish, USPS smishing, image OCR, normal family message, and a live audio call). The model + Whisper-base STT run entirely on your local GPU; no cloud calls at runtime.
+
+### Optional: RAG index
+
+RAG is **off by default** (the 300-sample eval showed it hurt on conversational ham — see Findings). Two switches control it:
+
+1. **Build the index** (one-time): `python backend/rag.py` → writes ChromaDB files to `data/vector_store/`.
+2. **Enable retrieval at runtime**: set `SCAM_SENTINEL_RAG=1` before starting uvicorn.
+
+```bash
+# Windows PowerShell
+$env:SCAM_SENTINEL_RAG = "1"
+uvicorn backend.main:app --host 0.0.0.0 --port 8000
+
+# macOS / Linux
+SCAM_SENTINEL_RAG=1 uvicorn backend.main:app --host 0.0.0.0 --port 8000
+```
+
+`GET /health` reports `"rag": "enabled"` or `"rag": "disabled (default)"` so you can verify. Programmatic callers can also pass `agent.analyze(signals, use_rag=True)` directly; the env var is just the demo-friendly toggle.
+
+### Troubleshooting
+
+- **`HTTP 500` on `/analyze/text`** → `ollama list` must show `gemma4-scam` (or `alicek0914/gemma4-scam`). Pull it first.
+- **`Tesseract binary not found`** → only affects the *Upload image (OCR)* tab. The other five demo scenarios still work.
+- **Whisper falls back to CPU** → ensure `torch` was installed with the CUDA wheel for your driver (`pip install torch --index-url https://download.pytorch.org/whl/cu124` for CUDA 12.4).
+- **Port 3000 / 8000 already in use** → set `--port` on the backend and update `BACKEND` in `frontend/app/demo/page.tsx` to match.
 
 ---
 

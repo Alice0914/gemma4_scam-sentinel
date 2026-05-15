@@ -27,6 +27,7 @@ FEEDBACK_PATH = Path("data/user_feedback.jsonl")
 agent: ScamReasoningAgent | None = None
 stt = None  # type: ignore[assignment]
 finetuned = None  # type: ignore[assignment]
+RAG_ENABLED: bool = False  # populated by lifespan(); read by analyze endpoints
 
 # In-memory accumulated transcript per call session (cleared on backend restart)
 voice_sessions: dict[str, str] = {}
@@ -34,13 +35,27 @@ voice_sessions: dict[str, str] = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global agent, stt, finetuned
+    global agent, stt, finetuned, RAG_ENABLED
+    import os
     from pathlib import Path
 
+    # RAG is OFF by default — the 300-sample eval showed retrieved FTC cases
+    # bias the model toward false positives on conversational ham. Set
+    # SCAM_SENTINEL_RAG=1 to enable retrieval; the vector_store index must
+    # also exist on disk.
     rag_retriever = None
-    if Path("data/vector_store").exists():
+    rag_requested = os.environ.get("SCAM_SENTINEL_RAG", "0") == "1"
+    if rag_requested and Path("data/vector_store").exists():
         from backend.rag import ScamCaseRetriever
         rag_retriever = ScamCaseRetriever(top_k=3)
+        RAG_ENABLED = True
+        print("[startup] RAG enabled (SCAM_SENTINEL_RAG=1, index found).")
+    elif rag_requested:
+        RAG_ENABLED = False
+        print("[startup] RAG requested but data/vector_store missing — disabled.")
+    else:
+        RAG_ENABLED = False
+        print("[startup] RAG disabled (default). Set SCAM_SENTINEL_RAG=1 to enable.")
 
     # Try loading the local fine-tuned Gemma 4 (transformers + PEFT, 4-bit).
     # If anything fails (no GPU, bnb broken, network), Stage 2 falls back
@@ -120,6 +135,7 @@ async def health():
             else f"{DEEP_MODEL} (Ollama, merged QLoRA → Q4_K_M GGUF)"
         ),
         "stt": "whisper-base" if stt is not None else "unavailable",
+        "rag": "enabled" if RAG_ENABLED else "disabled (default)",
     }
 
 
@@ -135,7 +151,87 @@ async def analyze_text(req: AnalyzeTextRequest):
     # Single-model architecture (no cascade): every request goes directly to
     # the fine-tuned Gemma 4 (or Ollama gemma4 fallback). Self-consistency off
     # for demo responsiveness.
-    return agent.analyze(signals, use_self_consistency=False, use_cascade=False)
+    return agent.analyze(signals, use_self_consistency=False, use_cascade=False, use_rag=RAG_ENABLED)
+
+
+@app.post("/analyze/image", response_model=AgentOutput)
+async def analyze_image(image: UploadFile = File(...)):
+    """
+    OCR an uploaded MMS-style scam screenshot via pytesseract, then route the
+    extracted text through the same analyzer the text channel uses. The
+    extracted text is also stored in metadata so the model can fire the
+    verify_image_message tool.
+    """
+    if agent is None:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+
+    try:
+        import io
+        from PIL import Image
+        import pytesseract
+    except ImportError as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"OCR deps missing — install pytesseract + Pillow: {e}",
+        )
+
+    # On Windows, pytesseract only looks at PATH by default. winget / the
+    # UB-Mannheim installer drops the binary in a standard location that the
+    # parent shell often hasn't picked up yet, so probe a few well-known paths.
+    if not pytesseract.pytesseract.tesseract_cmd or pytesseract.pytesseract.tesseract_cmd == "tesseract":
+        import shutil as _shutil
+        candidates = [
+            _shutil.which("tesseract"),
+            r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+            r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+            "/usr/bin/tesseract",
+            "/usr/local/bin/tesseract",
+            "/opt/homebrew/bin/tesseract",
+        ]
+        for path in candidates:
+            if path and Path(path).exists():
+                pytesseract.pytesseract.tesseract_cmd = path
+                break
+
+    image_bytes = await image.read()
+    try:
+        pil_img = Image.open(io.BytesIO(image_bytes))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"could not open image: {e}")
+
+    try:
+        extracted_text = pytesseract.image_to_string(pil_img).strip()
+    except pytesseract.TesseractNotFoundError:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Tesseract binary not found. Install it: "
+                "Windows → https://github.com/UB-Mannheim/tesseract/wiki ; "
+                "macOS → `brew install tesseract` ; "
+                "Linux → `apt install tesseract-ocr`."
+            ),
+        )
+
+    if not extracted_text:
+        # No readable text — return a synthetic safe verdict so the UI does not crash.
+        return AgentOutput(
+            risk_level="safe",
+            patterns=[],
+            user_message="No readable text was found in the image.",
+            tool_calls=[],
+            tool_results=[],
+            raw_reasoning="ocr_empty",
+        )
+
+    signals = SignalInput(
+        text=extracted_text,
+        channel="sms",
+        metadata={
+            "image_extracted_text": extracted_text,
+            "image_source": image.filename or "uploaded_image",
+        },
+    )
+    return agent.analyze(signals, use_self_consistency=False, use_cascade=False, use_rag=RAG_ENABLED)
 
 
 @app.post("/analyze/voice", response_model=AgentOutput)
@@ -148,7 +244,7 @@ async def analyze_voice(req: AnalyzeVoiceRequest):
         metadata=req.metadata,
         channel="voice",
     )
-    return agent.analyze(signals, use_self_consistency=False, use_cascade=False)
+    return agent.analyze(signals, use_self_consistency=False, use_cascade=False, use_rag=RAG_ENABLED)
 
 
 @app.post("/analyze/voice_chunk")
@@ -190,7 +286,7 @@ async def analyze_voice_chunk(
         metadata={"channel": "voice", "session_id": session_id},
         channel="voice",
     )
-    analysis = agent.analyze(signals, use_self_consistency=False, use_cascade=False)
+    analysis = agent.analyze(signals, use_self_consistency=False, use_cascade=False, use_rag=RAG_ENABLED)
 
     return {
         "session_id": session_id,
@@ -235,7 +331,7 @@ async def analyze_voice_full(audio: UploadFile = File(...)):
         metadata={"channel": "voice"},
         channel="voice",
     )
-    analysis = agent.analyze(signals, use_self_consistency=False, use_cascade=False)
+    analysis = agent.analyze(signals, use_self_consistency=False, use_cascade=False, use_rag=RAG_ENABLED)
 
     payload = {
         "transcript": result["text"],

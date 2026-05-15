@@ -646,6 +646,7 @@ class ScamReasoningAgent:
         signals: SignalInput,
         use_self_consistency: bool = True,
         use_cascade: bool = True,
+        use_rag: bool = False,
     ) -> AgentOutput:
         """
         Analyze signals and return structured output.
@@ -658,6 +659,11 @@ class ScamReasoningAgent:
             gemma4 is the stronger reasoner with native function calling).
 
         Set use_cascade=False to skip Stage 1 (e.g. for evaluation parity).
+
+        RAG is OFF by default. The 300-sample eval showed retrieved FTC cases
+        bias the model toward false positives on conversational ham. Pass
+        `use_rag=True` to enable retrieval; it has no effect if no retriever
+        was injected at agent construction (rag_retriever=None).
         """
         # ── Stage 1: fast classify with Gemma 3 ──────────────────────────
         if use_cascade:
@@ -675,7 +681,7 @@ class ScamReasoningAgent:
 
         # ── Stage 2: deep reasoning + function calling with Gemma 4 ──────
         similar_cases: list[dict] = []
-        if self.rag_retriever:
+        if use_rag and self.rag_retriever:
             query = signals.text or signals.transcript or ""
             similar_cases = self.rag_retriever.retrieve(query)
 

@@ -8,3 +8,5 @@ transformers>=4.50.0
 torch>=2.2.0
 librosa>=0.10.0
 certifi>=2024.0.0
+pytesseract>=0.3.10
+Pillow>=10.0.0
