@@ -30,6 +30,12 @@ data/synthetic/train_chat.fixed.jsonl
 *.log
 checkpoints/
 
+# Video clips used for the demo reel (hosted on YouTube; raw files don't belong in the repo)
+*.mp4
+*.mov
+영상/
+videos/
+
 # Secrets / env
 .env
 .env.local

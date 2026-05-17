@@ -26,73 +26,14 @@ Scam Sentinel is built to satisfy **four winning frames simultaneously**, not pi
 
 This project competes across **three tracks at once** — **Main Track** (best overall), **Safety & Trust Impact Track** (transparent, grounded, explainable AI), and the **Special Technology Tracks** (Ollama, Unsloth, llama.cpp).
 
+### Links
+
+- 🎬 **3-minute demo video (YouTube)**: *(link here when ready)*
+- 💻 **Code repository**: <https://github.com/Alice0914/gemma4_scam-sentinel>
+- 🤖 **LoRA adapter (HuggingFace)**: <https://huggingface.co/Alice0914/gemma4-e2b-scam-sentinel>
+- 📦 **Quantized model (Ollama Hub)**: <https://ollama.com/alicek0914/gemma4-scam>
+
 > **This is not a final forensic deepfake detector. It is a multimodal scam risk assistant that combines phone-call transcript analysis, conversation patterns, and verification workflows.**
-
----
-
-## Latest update (2026-05-14)
-
-- **QLoRA fine-tuning shipped** — `unsloth/gemma-4-E2B-it-unsloth-bnb-4bit` base, fine-tuned via Unsloth `FastLanguageModel` + TRL `SFTTrainer` on Colab Pro L4 (~50 min, 2 epochs, LoRA r=16)
-- **F1 86.1% / FPR 1.1%** on 300-sample real test set
-- **+28.1 F1 pt vs same-size E2B base** (58.0 → 86.1); **88× FPR reduction** (97.7% → 1.1%)
-- **Beats larger E4B base** (~8B): +22.7 F1 pt with a ~5B fine-tuned model
-- **Adapter published**: [Alice0914/gemma4-e2b-scam-sentinel](https://huggingface.co/Alice0914/gemma4-e2b-scam-sentinel) (~110 MB LoRA)
-- **Single-model architecture** — every request goes directly to fine-tuned Gemma 4 (no Stage 1 cascade).
-- **Local-first serving** — LoRA merged into the base, converted to a 3.2 GB Q4_K_M GGUF, and registered with Ollama as `gemma4-scam`. The backend talks to it over the local Ollama HTTP API; Whisper-base STT runs alongside on the same GPU.
-- **Demo hardware** — RTX 4060 Ti 8 GB. Both the fine-tuned reasoner and STT fit fully on-device; no cloud inference at demo time.
-
----
-
-## Architecture at a glance
-
-![Scam Sentinel system overview](docs/diagrams/Scam_Sentinel_System_Overview.png)
-
-### How a single request flows
-
-1. **Client (iPhone emulator UI)** — the user receives an SMS, email, MMS image, or live phone call inside the in-browser phone shell. Six pre-built scenarios cover the common scam shapes (BEC wire, Chase phish, USPS smishing, image smishing, normal family message, live audio call).
-2. **FastAPI backend** routes the request to the right endpoint:
-   - `POST /analyze/text` — SMS / email
-   - `POST /analyze/image` — MMS image (runs `pytesseract` OCR on the upload first)
-   - `POST /analyze/voice_full` — full call audio, SHA-256 cached so re-runs of the same clip are instant
-   - `POST /feedback` — async 👍 / 👎 event log for the Self-Improving Cascade
-3. **Pre-processing** — for voice, Whisper-base STT (≈ 150 MB) transcribes audio → text + per-sentence timestamps. It stays loaded on the same GPU as the reasoner so there is no model swap cost.
-4. **Reasoning (GPU)** — every request lands on **the same model**: fine-tuned Gemma 4 E2B + QLoRA, merged into the base and quantized to Q4_K_M GGUF (3.2 GB), served locally via Ollama as `gemma4-scam`. F1 86.1% / FPR 1.1% on the 300-sample real test set. No Stage 1 / Stage 2 cascade.
-5. **Action Layer — 12 protective tool calls** — the model emits structured JSON containing `risk_level`, `patterns[]`, a plain-language `user_message`, and a curated subset of 12 tool calls (6 verification + 6 channel defense). These are Gemma 4's *recommendations* — on a real mobile deployment the OS executes them (call blocklist, payment-app intercept, contacts push); in this demo the UI renders them as a checklist of "protective steps to take" so the user always knows what the model thinks should happen next.
-6. **Feedback path** — every verdict gets a 👍 / 👎 button. Events stream back to `/feedback` and feed the Self-Improving Cascade below.
-
-All five steps run on the user's local GPU. No cloud inference, no transcript or message leaves the machine at demo time — the privacy stance is the deployment shape, not a promise.
-
----
-
-## How it learns from feedback (Self-Improving Cascade)
-
-![Self-Improving Cascade — feedback loops](docs/diagrams/Self_improving_Cascade.png)
-
-Every 👍 / 👎 event is appended to `data/user_feedback.jsonl`. Two independent loops consume that store and produce promotable artifacts. **Both loops gate every promotion behind the same 300-sample real evaluation set**, so a regression never reaches production.
-
-### Loop A — Constitutional Self-Critique *(prompt-level)*
-
-Operates at the prompt layer; no retraining required, so the turnaround is hours not days.
-
-1. **Trigger** — daily cron, or manual via `python scripts/self_critique.py`.
-2. **Review** — Gemma 4 reads every recent `false_alarm` event and identifies which prompt rule each one violated.
-3. **Propose** — emits a revised `backend/prompts/system_prompt.md` (typically a tightening of the SAFE-by-default rule or a new always-safe category).
-4. **A/B gate** — both the current and proposed prompts run against `data/evaluation/eval_set.jsonl` (300 hand-labeled samples).
-5. **Promote** — only if F1 does not regress AND FPR stays under the locked threshold. Promoted artifact: `backend/prompts/system_prompt.md`.
-
-### Loop B — DPO Preference Tuning *(weights-level)*
-
-Operates on the model weights themselves; produces a new LoRA adapter when enough feedback has accumulated.
-
-1. **Trigger** — manual / weekly, once enough 👍 + 👎 events have accumulated to make a meaningful training set.
-2. **Build preference pairs** — `scripts/build_dpo_pairs.py` converts the feedback log into (prompt, chosen, rejected) triples:
-   - `false_alarm` → **rejected** = the over-flagged response, **chosen** = a synthesized SAFE response. Teaches: stop yelling on normal messages.
-   - `correct` with risk ≥ medium → **chosen** = the correct flagged response, **rejected** = synthesized "missed it" silence. Teaches: stop going silent on real scams.
-3. **Train DPO adapter** — `scripts/train_dpo.py` runs in WSL2 on the GPU using `trl.DPOTrainer` + Unsloth's `PatchDPOTrainer()` for the fast kernels (β = 0.1, lr = 5e-6, LoRA r = 16, starting from the published SFT adapter).
-4. **Evaluation gate** — same 300-sample real test set. Promote only if F1 ↑ AND FPR ↓.
-5. **Ship** — merge LoRA → bf16 safetensors → GGUF f16 → Q4_K_M, then `ollama create gemma4-scam:dpo` (identical pipeline to the initial SFT deployment in [§Deploying the fine-tuned model](#deploying-the-fine-tuned-model-qlora--ollama)).
-
-The two loops are deliberately decoupled: Loop A can ship fixes within hours when a new scam category emerges, while Loop B accumulates volume and ships a stronger model on a slower cadence.
 
 ---
 
@@ -109,6 +50,59 @@ Output is structured: a risk level, a plain-language explanation, the scam patte
 
 ---
 
+## Architecture at a glance
+
+![Scam Sentinel system overview](docs/diagrams/Scam_Sentinel_System_Overview.png)
+
+### How a single request flows
+
+1. **Client (iPhone emulator UI)** — the user receives an SMS, email, MMS image, or live phone call inside the in-browser phone shell. Five pre-built scenarios cover the common scam shapes (live audio call, BEC wire, Chase phish, image smishing, normal family message).
+2. **FastAPI backend** routes the request to the right endpoint:
+   - `POST /analyze/text` — SMS / email
+   - `POST /analyze/image` — MMS image (runs `pytesseract` OCR on the upload first)
+   - `POST /analyze/voice_full` — full call audio, SHA-256 cached so re-runs of the same clip are instant
+   - `POST /feedback` — async 👍 / 👎 event log (the UI also shows a 🤷 'Not sure' option, which dismisses the prompt without logging anything — no signal, no noise)
+3. **Pre-processing** — for voice, Whisper-base STT (≈ 150 MB) transcribes audio → text + per-sentence timestamps. It stays loaded on the same GPU as the reasoner so there is no model swap cost.
+4. **Reasoning (GPU)** — every request lands on **the same model**: fine-tuned Gemma 4 E2B + QLoRA, merged into the base and quantized to Q4_K_M GGUF (3.2 GB), served locally via Ollama as `gemma4-scam`. F1 86.1% / FPR 1.1% on the 300-sample real test set. 
+5. **Action Layer — 12 protective tool calls** — the model emits structured JSON containing `risk_level`, `patterns[]`, a plain-language `user_message`, and a curated subset of 12 tool calls (6 verification + 6 channel defense). These are Gemma 4's *recommendations* — on a real mobile deployment the OS executes them (call blocklist, payment-app intercept, contacts push); in this demo the UI renders them as a checklist of "protective steps to take" so the user always knows what the model thinks should happen next.
+6. **Feedback path** — every verdict gets a 👍 / 👎 button. Events stream back to `/feedback` and feed the Self-Improving Cascade below.
+
+All inference runs on the user's local GPU. User content — message text, voice transcripts, OCR-extracted image text — never leaves the machine at runtime; the only thing that crosses the network is the model weights themselves, and only once at install time (ollama pull).
+
+---
+
+## How it learns from feedback (Self-Improving Cascade)
+
+![Self-Improving Cascade — feedback loops](docs/diagrams/Self_improving_Cascade.png)
+
+Every 👍 / 👎 event is appended to `data/user_feedback.jsonl`. Two independent loops consume that store and produce promotable artifacts. **Both loops gate every promotion against the same real evaluation set** — Loop A defaults to a 50-sample stratified subset for fast iteration (`--full` switches to the entire 300), Loop B uses the full 300 via `scripts/evaluate.py`. A regression never reaches production.
+
+### Loop A — Constitutional Self-Critique *(prompt-level)*
+
+Operates at the prompt layer; no retraining required, so the turnaround is hours not days.
+
+1. **Trigger** — manual via `python scripts/self_critique.py --apply` (schedulable via cron once a feedback cadence is established).
+2. **Review** — Gemma 4 reads recent `false_alarm` events whose predicted risk was NOT `safe` (the only ones that came out of the deep reasoner) and identifies which prompt rule each one violated.
+3. **Propose** — emits a revised `backend/prompts/system_prompt.md` (typically a tightening of the SAFE-by-default rule or a new always-safe category).
+4. **A/B gate** — both the current and proposed prompts run against `data/evaluation/eval_set.jsonl` (defaults to a 50-sample stratified subset for ~5-minute turnaround; `--full` uses the entire 300 hand-labeled samples).
+5. **Promote** — only if F1 does not regress AND FPR **strictly decreases**. Promoted artifact: `backend/prompts/system_prompt.md`.
+
+### Loop B — DPO Preference Tuning *(weights-level)*
+
+Operates on the model weights themselves; produces a new LoRA adapter when enough feedback has accumulated.
+
+1. **Trigger** — manual / weekly, once enough 👍 + 👎 events have accumulated to make a meaningful training set.
+2. **Build preference pairs** — `scripts/build_dpo_pairs.py` converts the feedback log into (prompt, chosen, rejected) triples:
+   - `false_alarm` → **rejected** = the over-flagged response, **chosen** = a synthesized SAFE response. Teaches: stop yelling on normal messages.
+   - `correct` with risk ≥ medium → **chosen** = the correct flagged response, **rejected** = synthesized "missed it" silence. Teaches: stop going silent on real scams.
+3. **Train DPO adapter** — `scripts/train_dpo.py` runs in WSL2 on the GPU using `trl.DPOTrainer` + Unsloth's `PatchDPOTrainer()` for the fast kernels (β = 0.1, lr = 5e-6, LoRA r = 16, starting from the published SFT adapter).
+4. **Evaluation gate (manual today)** — run `scripts/evaluate.py` against the 300-sample test set; promote only if F1 ↑ AND FPR ↓. (The trainer saves the adapter unconditionally; the gate lives outside the training script so the trained artifact is preserved even when it fails the bar.)
+5. **Ship** — merge LoRA → bf16 safetensors → GGUF f16 → Q4_K_M, then `ollama create gemma4-scam:dpo` (identical pipeline to the initial SFT deployment in [§Deploying the fine-tuned model](#deploying-the-fine-tuned-model-qlora--ollama)).
+
+The two loops are deliberately decoupled: Loop A can ship fixes within hours when a new scam category emerges, while Loop B accumulates volume and ships a stronger model on a slower cadence.
+
+---
+
 ## Finalized features
 
 ### 1. Multimodal input channels
@@ -117,7 +111,7 @@ Output is structured: a risk level, a plain-language explanation, the scam patte
 |---|---|---|
 | 💬 SMS | ✅ | Text message analysis |
 | 📧 Email | ✅ | Sender + content analysis (BEC, phishing) |
-| 📞 Voice | ✅ | Call-transcript analysis (voice signals stub) |
+| 📞 Voice | ✅ | Live call transcription via Whisper-base STT, analyzed every 20 s |
 | 📷 Image (MMS) | ✅ | OCR-extracted-text re-analysis |
 
 ### 2. Twelve protective tools (function calling)
@@ -140,21 +134,20 @@ Every Gemma 4 verdict at risk ≥ medium produces a curated subset of these 12 t
 11. `show_official_contact` — Real phone/website for the impersonated brand (Chase, USPS, IRS, Amazon, FedEx, UPS, PayPal, Wells Fargo, SSA, Bank of America)
 12. `flag_red_phrases` — Highlight specific risky phrases inside the original message
 
-### 3. Six demo scenarios (one-tap reproducible)
+### 3. Five demo scenarios (one-tap reproducible)
 
 | Scenario | Channel | Tool calls Gemma 4 makes |
 |---|---|---|
-| 👴 Grandparent scam | voice | block_phone, callback, secret question, wait timer, flag phrases, notify family |
+| 👴 Grandparent scam (live audio call) | voice | block_phone, callback, secret question, wait timer, flag phrases, notify family |
 | 💼 BEC wire fraud | email | block_email, official_contact (Bank of America), block_payment, flag phrases |
-| 📦 USPS package phishing | sms | check_url (lookalike), official_contact (USPS), block_phone |
 | 🏦 Chase bank phish | sms | check_url, official_contact (Chase), block_phone |
-| 📷 Image smishing | sms | verify_image (OCR), check_url (FedEx-track.xyz), official_contact (FedEx) |
-| ✅ Normal family message | sms | (no tools — false-positive control) |
+| 📷 Image smishing (MMS) | sms | verify_image (OCR), check_url (FedEx-track.xyz), official_contact (FedEx) |
+| ✅ Normal family message (saved contact "James (Son)") | sms | (no auto-scan — manual "Scan with Sentinel" only) |
 
 ### 4. Phone-emulator demo UI
 
 - iPhone-style shell — bezel, Dynamic Island, home indicator, iOS status bar with cellular / WiFi / battery SVG icons
-- Five built-in scenarios + a live audio call (left phone) with a paired analysis panel (right side) showing the verdict, detected patterns, protective tool calls, and the plain-language reason
+- Four built-in text/email scenarios + a live audio-call scenario (left phone) with a paired analysis panel (right side) showing the verdict, detected patterns, protective tool calls, and the plain-language reason
 - iOS-style notification banner that slides in from the top when a message "arrives"; soft pulse on the critical CTA buttons
 - **Full-screen takeover when risk is high** — red gradient with the verdict, the patterns Gemma 4 detected, the protective steps it called for, and a single primary action button (e.g. 🛑 HANG UP NOW & BLOCK +1-555-0142)
 - **Image-MMS handling** — chat-thread preview with the incoming image blurred behind a centered Sentinel modal that asks the user to confirm before pytesseract OCR + analysis run
@@ -238,15 +231,13 @@ The interim story was an **inversion** — small model wins on calibration, larg
 
 See [docs/eval_results.md](docs/eval_results.md) and [docs/prompt_versions.md](docs/prompt_versions.md) for the full methodology and prompt-version history.
 
-**Adapter is public**: [Alice0914/gemma4-e2b-scam-sentinel](https://huggingface.co/Alice0914/gemma4-e2b-scam-sentinel) (~110 MB LoRA, loads on RTX 4060 8 GB).
-
 ---
 
 ## Stack
 
 - **Backend**: FastAPI + Ollama HTTP API + ChromaDB (optional, RAG off by default)
 - **Frontend**: Next.js 16 + React 19 + TailwindCSS 4
-- **Reasoning model**: Fine-tuned Gemma 4 E2B + QLoRA, merged into the base and quantized to Q4_K_M GGUF (3.2 GB), served locally as `ollama:gemma4-scam`
+- **Reasoning model**: Fine-tuned Gemma 4 E2B + QLoRA, merged into the base and quantized to Q4_K_M GGUF (3.2 GB), served locally via Ollama as the model `gemma4-scam` (also published as `alicek0914/gemma4-scam` on Ollama Hub)
 - **STT**: Whisper-base via HuggingFace ASR pipeline (CUDA, ~150 MB)
 - **Training stack**: Unsloth + TRL (SFTTrainer for the SFT pass, DPOTrainer for Loop B)
 - **Embedding model**: ChromaDB default (all-MiniLM-L6-v2 equivalent)
@@ -301,7 +292,7 @@ The repo references the model as `gemma4-scam`. If you pulled it under the names
 ollama cp alicek0914/gemma4-scam gemma4-scam
 ```
 
-That's it — `/demo` route loads the iPhone emulator with six built-in scenarios (BEC wire, Chase phish, USPS smishing, image OCR, normal family message, and a live audio call). The model + Whisper-base STT run entirely on your local GPU; no cloud calls at runtime.
+That's it — `/demo` route loads the iPhone emulator with the five built-in scenarios (live audio call, BEC wire, Chase phish, image smishing MMS, normal family message). The model + Whisper-base STT run entirely on your local GPU; no cloud calls at runtime.
 
 ### Optional: RAG index
 
@@ -436,20 +427,19 @@ scam-sentinel/
 ├── README.md                       # this file
 ├── finetune_gemma4_e2b.ipynb       # Colab notebook used for the SFT QLoRA run
 ├── backend/                        # FastAPI + reasoning agent + 12 tools
-│   ├── main.py                    # endpoints: /analyze/{text,voice,voice_chunk,voice_full}, /feedback
+│   ├── main.py                    # endpoints: /health, /analyze/{text,image,voice,voice_chunk,voice_full}, /feedback
 │   ├── reasoning_agent.py         # Ollama client + user_message cleaner + tool inference
 │   ├── finetuned_agent.py         # optional in-process PEFT path (fallback to Ollama if unavailable)
 │   ├── stt.py                     # Whisper-base wrapper (HF pipeline, long-form chunking)
 │   ├── tools.py
 │   ├── rag.py                     # ChromaDB retriever (opt-in)
 │   └── prompts/system_prompt.md   # v3 (SAFE-by-default rule)
-├── frontend/app/
-│   ├── page.tsx                   # baseline demo
-│   ├── demo/page.tsx              # phone-emulator demo with 6 scenarios + live call
-│   └── components/
-│       ├── PhoneEmulator.tsx      # iPhone-style emulator
-│       ├── AnalysisPanel.tsx      # right-side reasoning panel
-│       └── AnalysisResult.tsx     # standalone result card (legacy)
+├── frontend/
+│   ├── public/sample_mms/         # demo MMS image assets (fedex_scam.png, etc.)
+│   └── app/
+│       ├── page.tsx               # baseline single-scenario demo
+│       ├── demo/page.tsx          # main phone-emulator demo (5 scenarios + live call)
+│       └── components/            # PhoneEmulator / AnalysisPanel (used by baseline)
 ├── data/
 │   ├── synthetic/                 # train.jsonl (3,100), dev.jsonl (771)
 │   ├── evaluation/                # eval_set.jsonl (300), eval_set_70.jsonl (backup)
@@ -472,43 +462,18 @@ scam-sentinel/
 │   ├── build_dpo_pairs.py         # feedback → preference pairs (Loop B step 1)
 │   ├── train_dpo.py               # DPO from SFT adapter (Loop B step 2)
 │   ├── self_critique.py           # Constitutional self-critique (Loop A)
-│   └── seed_demo_feedback.py      # backfill borderline-normal feedback for Loop A
+│   ├── seed_demo_feedback.py      # backfill borderline-normal feedback for Loop A
+│   └── fix_train_labels.py        # audit/repair synthetic training labels
 └── docs/
     ├── eval_results.md
     ├── prompt_versions.md
     └── diagrams/
         ├── 01_system_overview.mmd
         ├── 02_cascade_flow.mmd
-        └── 03_self_improving_cascade.mmd
+        ├── 03_self_improving_cascade.mmd
+        ├── Scam_Sentinel_System_Overview.png   # rendered, embedded in README
+        └── Self_improving_Cascade.png          # rendered, embedded in README
 ```
-
----
-
-## Self-Improving Cascade — DPO from user feedback (Loop B)
-
-Every 👍/👎 click in the UI streams to `data/user_feedback.jsonl` via the
-`/feedback` endpoint. Two scripts convert that signal into a fresh LoRA:
-
-```bash
-# 1. Convert feedback → preference pairs
-#    false_alarm  → chosen=safe, rejected=over-flagged response
-#    correct (≥medium) → chosen=flagged, rejected=synthesized "missed it" silence
-python scripts/build_dpo_pairs.py
-# → data/dpo_pairs.jsonl
-
-# 2. DPO from the published SFT adapter (run in WSL2 / Linux on a GPU)
-python scripts/train_dpo.py \
-    --pairs data/dpo_pairs.jsonl \
-    --output models/gemma4-e2b-scam-dpo
-# → new LoRA adapter
-
-# 3. Deploy: merge + GGUF + Ollama, same path as the SFT adapter (see above)
-python scripts/merge_lora.py --adapter models/gemma4-e2b-scam-dpo --output …
-```
-
-Built on `trl.DPOTrainer` + Unsloth's `PatchDPOTrainer()` for the same fast
-kernels used in SFT. The DPO loop is *opt-in* — production demos run the
-locked SFT adapter; rerun the two scripts after collecting enough new feedback.
 
 ---
 
