@@ -32,7 +32,7 @@ This project competes across **three tracks at once** — **Main Track** (best o
 
 ## Latest update (2026-05-14)
 
-- **QLoRA fine-tuning shipped** — Gemma 4 E2B-it via Unsloth on Colab Pro L4 (~50 min, 2 epochs, LoRA r=16)
+- **QLoRA fine-tuning shipped** — `unsloth/gemma-4-E2B-it-unsloth-bnb-4bit` base, fine-tuned via Unsloth `FastLanguageModel` + TRL `SFTTrainer` on Colab Pro L4 (~50 min, 2 epochs, LoRA r=16)
 - **F1 86.1% / FPR 1.1%** on 300-sample real test set
 - **+28.1 F1 pt vs same-size E2B base** (58.0 → 86.1); **88× FPR reduction** (97.7% → 1.1%)
 - **Beats larger E4B base** (~8B): +22.7 F1 pt with a ~5B fine-tuned model
@@ -153,13 +153,14 @@ Every Gemma 4 verdict at risk ≥ medium produces a curated subset of these 12 t
 
 ### 4. Phone-emulator demo UI
 
-- Realistic iPhone shell: bezel, side buttons, Dynamic Island, real-time status bar clock, home indicator
-- Channel-aware screen rendering: SMS app, Mail app, incoming-call screen
-- iOS-style notification banner slides in when a message "arrives"
-- Vibration shake animation on incoming message/call
-- Ring pulse + sound-wave animation on incoming call
-- Result overlay slides up from bottom with all tool-result cards
-- Right pane shows Gemma 4's chain-of-thought reasoning step by step (Steps 1–5)
+- iPhone-style shell — bezel, Dynamic Island, home indicator, iOS status bar with cellular / WiFi / battery SVG icons
+- Five built-in scenarios + a live audio call (left phone) with a paired analysis panel (right side) showing the verdict, detected patterns, protective tool calls, and the plain-language reason
+- iOS-style notification banner that slides in from the top when a message "arrives"; soft pulse on the critical CTA buttons
+- **Full-screen takeover when risk is high** — red gradient with the verdict, the patterns Gemma 4 detected, the protective steps it called for, and a single primary action button (e.g. 🛑 HANG UP NOW & BLOCK +1-555-0142)
+- **Image-MMS handling** — chat-thread preview with the incoming image blurred behind a centered Sentinel modal that asks the user to confirm before pytesseract OCR + analysis run
+- **Saved-contact messages** are surfaced with the contact name (e.g. "James (Son)") and are not auto-scanned; a manual "Scan with Sentinel" button covers the SIM-swap / hijacked-account edge case
+- **Inline feedback panel** after every result ("Was this analysis helpful? 👍 / 🤷 / 👎") feeding the Self-Improving Cascade
+- Right pane surfaces the structured output the model returned — risk level, detected patterns, protective tool calls, and the plain-language `user_message`
 
 ### 5. Reasoning architecture
 
@@ -184,46 +185,17 @@ Train/eval leakage explicitly prevented by excluding the 571 UCI seeds used in t
 
 ## Evaluation results
 
-### Final: 300-sample real test set (2026-05-06)
+All numbers below are measured on the same **300-sample real test set** — 70 hand-labeled (30 FTC scam + 30 normal + 10 edge) + 230 UCI SMS (150 ham + 80 spam, training-disjoint via the `seeds_real.jsonl` filter). The set is never touched during training.
 
-300 hand-labeled / training-disjoint samples: 70 original (30 FTC scam + 30 normal + 10 edge) + 230 UCI SMS (150 ham + 80 spam, all excluded from training via the `seeds_real.jsonl` filter).
+### Final result — QLoRA fine-tune vs base models (3-way apples-to-apples)
 
-| Setup | Accuracy | Precision | Recall | F1 | FPR |
-|---|---|---|---|---|---|
-| **gemma3:4b / v3 / no RAG** ✅ production | **80.3%** | 68.1% | 99.2% | **80.8%** | **33.1%** |
-| gemma3:4b / v3 / + RAG | 65.7% | 54.8% | 100.0% | 70.8% | 58.9% |
-| gemma4 9B / v3 / no RAG | 53.0% | 46.9% | 97.6% | 63.4% | 78.9% |
-
-### Findings
-
-1. **gemma3:4b decisively beats gemma4 9B at classification.** F1 80.8% vs 63.4%; FPR 33.1% vs 78.9%. Gemma 4 9B has a strong calibration bias toward "low" risk on any message mentioning money or urgency, which the 300-sample UCI ham distribution exposes severely.
-2. **RAG hurts on the broader test set.** It helped slightly on the original 70 samples (FPR 28% → 24%) but on 300 samples both models regressed (gemma3 F1 dropped 10pt; gemma4 also worsened). Retrieved FTC cases act as noise on plain conversational ham messages, biasing the model toward false positives. A category-balanced RAG index is required before re-enabling.
-3. **All configs maintain near-perfect recall (97–100%).** No model misses real scams in the test set. The bottleneck is false positives, not false negatives — exactly the failure mode the SAFE-by-default rule (v3 prompt) was designed to address, but Gemma 4 9B does not respond to it.
-4. **Interim choice (pre-QLoRA)**: gemma3:4b without RAG for classification + tool inference; gemma4 9B was reserved for richer chain-of-thought explanation when latency was acceptable. **This cascade was retired** once the QLoRA model below cleared both axes on its own — see Track B results.
-
-### Evolution: 70 → 300 samples (why the production choice changed)
-
-The original 70-sample evaluation made every model look better. Expanding to 300 with diverse UCI ham was what exposed gemma4 9B's real-world calibration issue.
-
-| Model + prompt + RAG | 70-sample F1 / FPR | 300-sample F1 / FPR | FPR change |
-|---|---|---|---|
-| gemma3:4b / v2 / no RAG | 92.8% / 28.0% | 80.8% / 33.1% (v3) | +5.1 pt |
-| gemma3:4b / v2 / + RAG | **91.5% / 24.0%** | 70.8% / 58.9% (v3) | +34.9 pt |
-| gemma4 9B / v3 / no RAG | 83.3% / 72.0% | 63.4% / 78.9% | +6.9 pt |
-
-The interim takeaway was an **inversion story** — small model wins on calibration, large model wins on explanation depth — which justified the hybrid cascade as a stopgap. The follow-up QLoRA experiment (next section) collapsed that trade-off into a single model, so production is no longer a cascade.
-
-See [docs/eval_results.md](docs/eval_results.md) and [docs/prompt_versions.md](docs/prompt_versions.md) for the full methodology and prompt-version history.
-
-### Track B: QLoRA fine-tuning — 3-way apples-to-apples comparison (2026-05-11)
-
-Same 300-sample real evaluation set, no RAG, identical v3 system prompt. The three rows differ only in base-model size and the presence of the fine-tuned LoRA adapter:
+Identical v3 system prompt, no RAG. The three rows differ only in base-model size and the presence of the fine-tuned LoRA adapter:
 
 | Setup | Size | Accuracy | Precision | Recall | F1 | FPR |
 |---|---|---|---|---|---|---|
 | Gemma 4 E4B base (Ollama Q4_K_M) | ~8B | 53.0% | 46.9% | 97.6% | 63.4% | 78.9% |
 | Gemma 4 **E2B base** (Ollama Q4_K_M) | ~5B | 41.7% | 41.4% | 96.8% | 58.0% | **97.7%** |
-| **Gemma 4 E2B + QLoRA** ([Unsloth adapter](https://huggingface.co/Alice0914/gemma4-e2b-scam-sentinel)) | ~5B | **89.7%** | **98.0%** | 76.8% | **86.1%** | **1.1%** |
+| **Gemma 4 E2B + QLoRA** ([Unsloth adapter](https://huggingface.co/Alice0914/gemma4-e2b-scam-sentinel)) ✅ production | ~5B | **89.7%** | **98.0%** | 76.8% | **86.1%** | **1.1%** |
 
 **Key findings**
 
@@ -231,6 +203,40 @@ Same 300-sample real evaluation set, no RAG, identical v3 system prompt. The thr
 2. **Untuned Gemma 4 base is unusable for this task**: both E2B and E4B base models flag the vast majority of normal messages as suspicious (FPR 78.9% and 97.7%). The base instruction-tuned model has no domain prior for scam vs. normal text.
 3. **Fine-tuning beats raw scale**: the fine-tuned 5B (E2B) model outperforms the larger 8B (E4B) base by +22.7 F1 points, while running on consumer-grade hardware (8 GB VRAM via Ollama Q4_K_M).
 4. **Trade-off — recall**: 96.8% (E2B base) → 76.8% (fine-tuned). The design chooses precision-first calibration because every false alarm on a normal message destroys user trust; see "Design rationale" in the [HF model card](https://huggingface.co/Alice0914/gemma4-e2b-scam-sentinel). The Self-Improving Cascade DPO loop (Loop B, below) is the recall-recovery mechanism — every confirmed-miss flows back into the next adapter.
+
+---
+
+### How we got here — research history (interim baselines, pre-QLoRA)
+
+Before the QLoRA model existed, we ran two earlier evaluation rounds on the same 300-sample set. The history is kept here because the negative findings (RAG hurts, Gemma 4 9B miscalibrates on conversational ham, the 70 → 300 sample expansion changes the verdict) are themselves load-bearing — they justify several current architectural choices (RAG off by default, single-model instead of cascade, 300-sample evaluation gate everywhere).
+
+**Pre-QLoRA — 300-sample baseline (2026-05-06)**
+
+| Setup | Accuracy | Precision | Recall | F1 | FPR |
+|---|---|---|---|---|---|
+| **gemma3:4b / v3 / no RAG** (best pre-QLoRA baseline) | **80.3%** | 68.1% | 99.2% | **80.8%** | **33.1%** |
+| gemma3:4b / v3 / + RAG | 65.7% | 54.8% | 100.0% | 70.8% | 58.9% |
+| gemma4 9B / v3 / no RAG | 53.0% | 46.9% | 97.6% | 63.4% | 78.9% |
+
+Findings:
+
+1. **gemma3:4b decisively beat gemma4 9B at classification.** F1 80.8% vs 63.4%; FPR 33.1% vs 78.9%. Gemma 4 9B has a strong calibration bias toward "low" risk on any message mentioning money or urgency, which the 300-sample UCI ham distribution exposed severely.
+2. **RAG hurt on the broader test set.** It helped slightly on the original 70 samples (FPR 28% → 24%) but on 300 samples both models regressed (gemma3 F1 dropped 10pt; gemma4 also worsened). Retrieved FTC cases act as noise on plain conversational ham messages, biasing the model toward false positives. This is why RAG is wired but off by default in production.
+3. **All configs maintained near-perfect recall (97–100%)** at this stage. The bottleneck was false positives, not false negatives — exactly the failure mode the SAFE-by-default rule (v3 prompt) was designed to address, but Gemma 4 9B did not respond to it.
+
+**Evolution: 70 → 300 samples**
+
+The original 70-sample evaluation made every model look better. Expanding to 300 with diverse UCI ham exposed the real-world calibration issue:
+
+| Model + prompt + RAG | 70-sample F1 / FPR | 300-sample F1 / FPR | FPR change |
+|---|---|---|---|
+| gemma3:4b / v2 / no RAG | 92.8% / 28.0% | 80.8% / 33.1% (v3) | +5.1 pt |
+| gemma3:4b / v2 / + RAG | **91.5% / 24.0%** | 70.8% / 58.9% (v3) | +34.9 pt |
+| gemma4 9B / v3 / no RAG | 83.3% / 72.0% | 63.4% / 78.9% | +6.9 pt |
+
+The interim story was an **inversion** — small model wins on calibration, large model wins on explanation depth — which justified a stopgap hybrid cascade (Gemma 3 triage → Gemma 4 reasoning on non-safe inputs). **The QLoRA experiment above collapsed that trade-off into a single model**, which is why production is no longer a cascade.
+
+See [docs/eval_results.md](docs/eval_results.md) and [docs/prompt_versions.md](docs/prompt_versions.md) for the full methodology and prompt-version history.
 
 **Adapter is public**: [Alice0914/gemma4-e2b-scam-sentinel](https://huggingface.co/Alice0914/gemma4-e2b-scam-sentinel) (~110 MB LoRA, loads on RTX 4060 8 GB).
 

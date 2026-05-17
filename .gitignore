@@ -23,6 +23,8 @@ data/synthetic/raw_real.jsonl
 data/synthetic/combined.jsonl
 # Regeneratable via scripts/prepare_finetune_data.py (~61 MB, exceeds GitHub recommendation)
 data/synthetic/train_chat.jsonl
+# Repaired variant produced by scripts/fix_train_labels.py — same size
+data/synthetic/train_chat.fixed.jsonl
 
 # Logs and checkpoints
 *.log
