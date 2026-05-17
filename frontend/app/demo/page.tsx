@@ -453,6 +453,14 @@ function LiveCallView() {
     if (audioRef.current) audioRef.current.currentTime = 0;
   }
 
+  // Pause the audio without changing callState — used when the user taps
+  // 🛑 HANG UP NOW so the audio (and therefore the transcript / interval
+  // checks) stops the moment they decide to hang up, even while the
+  // feedback panel is still on screen.
+  function pauseAudio() {
+    audioRef.current?.pause();
+  }
+
   function reset() {
     setCallState("idle");
     setSegments([]);
@@ -463,6 +471,15 @@ function LiveCallView() {
   }
 
   const visibleSegments = segments.slice(0, visibleCount);
+
+  // Auto-scroll the transcript column to the bottom whenever a new segment
+  // becomes visible, so the latest line is always in view without the user
+  // having to scroll manually.
+  const transcriptScrollRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = transcriptScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [visibleSegments.length]);
   // Surface the giant red overlay the moment any dangerous check arrives.
   // The check itself only fires on the 20-second interval, so the overlay
   // timing is paced by the interval — no separate timestamp gate.
@@ -480,6 +497,7 @@ function LiveCallView() {
           dangerousCheck={dangerousCheck}
           transcript={visibleSegments.map((s) => s.text).join(" ")}
           onStart={startCall}
+          onPauseAudio={pauseAudio}
           onEnd={endCall}
           onReset={reset}
         />
@@ -505,65 +523,82 @@ function LiveCallView() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-3">
-          {error && (
-            <div className="border border-red-400 bg-red-50 rounded-md p-3 text-sm text-red-800">
-              {error}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left column — live transcript (Whisper) */}
+          <div
+            ref={transcriptScrollRef}
+            className="flex-1 overflow-y-auto p-6 space-y-3 border-r border-gray-200"
+          >
+            <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">
+              Live transcript
             </div>
-          )}
 
-          {callState === "idle" && (
-            <p className="text-sm text-gray-500">
-              Click <span className="text-emerald-400">📞 Ring phone</span> on the
-              left. Audio starts immediately. Each spoken phrase appears here
-              after it has been said; Gemma 4 pushes a risk notification onto
-              the phone screen every {ANALYZE_INTERVAL_SEC} seconds.
-            </p>
-          )}
-
-          {visibleSegments.length === 0 && callState === "connected" && (
-            <p className="text-sm text-gray-500 animate-pulse">Connecting…</p>
-          )}
-
-          {visibleSegments.map((s, i) => (
-            <div
-              key={i}
-              className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 animate-in fade-in slide-in-from-bottom-2 duration-300 flex gap-3"
-            >
-              <div className="text-[10px] text-gray-500 mt-0.5 w-10 shrink-0">
-                {formatTime(s.end)}
+            {error && (
+              <div className="border border-red-400 bg-red-50 rounded-md p-3 text-sm text-red-800">
+                {error}
               </div>
-              <p className="text-sm text-gray-700 leading-relaxed flex-1">{s.text}</p>
-            </div>
-          ))}
+            )}
 
-          {checks.length > 0 && (
-            <div className="mt-6 space-y-2 border-t border-gray-200 pt-4">
-              <div className="text-xs uppercase tracking-wider text-gray-500">
-                Gemma 4 risk checks ({checks.length})
-              </div>
-              {checks.map((c, i) => (
-                <div
-                  key={i}
-                  className={`border rounded-md p-2.5 text-xs ${RISK_COLORS[c.risk]}`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span>
-                      @ {formatTime(c.atSecond)} — {c.patterns.join(", ") || "no patterns"}
-                    </span>
-                    <span className="font-semibold">
-                      {riskEmoji(c.risk)} {c.risk.toUpperCase()}
-                    </span>
-                  </div>
-                  {filterVisibleTools(c.toolCalls).length > 0 && (
-                    <div className="opacity-90 mt-0.5">
-                      Tools: {filterVisibleTools(c.toolCalls).map((t) => toolLabel(t.name)).join(" · ")}
-                    </div>
-                  )}
+            {callState === "idle" && (
+              <p className="text-sm text-gray-500">
+                Click <span className="text-emerald-600">📞 Ring phone</span> on the
+                left. Audio starts immediately. Each spoken phrase appears here
+                after it has been said; Gemma 4 pushes a risk notification onto
+                the phone screen every {ANALYZE_INTERVAL_SEC} seconds.
+              </p>
+            )}
+
+            {visibleSegments.length === 0 && callState === "connected" && (
+              <p className="text-sm text-gray-500 animate-pulse">Connecting…</p>
+            )}
+
+            {visibleSegments.map((s, i) => (
+              <div
+                key={i}
+                className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 animate-in fade-in slide-in-from-bottom-2 duration-300 flex gap-3"
+              >
+                <div className="text-[10px] text-gray-500 mt-0.5 w-10 shrink-0">
+                  {formatTime(s.end)}
                 </div>
-              ))}
+                <p className="text-sm text-gray-700 leading-relaxed flex-1">{s.text}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Right column — Gemma 4 risk checks history */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-2">
+            <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">
+              Gemma 4 risk checks {checks.length > 0 && `(${checks.length})`}
             </div>
-          )}
+
+            {checks.length === 0 && (
+              <p className="text-sm text-gray-500">
+                A check fires every {ANALYZE_INTERVAL_SEC} seconds while the
+                call is live. Verdicts will appear here as they arrive.
+              </p>
+            )}
+
+            {checks.map((c, i) => (
+              <div
+                key={i}
+                className={`border rounded-md p-2.5 text-xs ${RISK_COLORS[c.risk]}`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span>
+                    @ {formatTime(c.atSecond)} — {c.patterns.join(", ") || "no patterns"}
+                  </span>
+                  <span className="font-semibold">
+                    {riskEmoji(c.risk)} {c.risk.toUpperCase()}
+                  </span>
+                </div>
+                {filterVisibleTools(c.toolCalls).length > 0 && (
+                  <div className="opacity-90 mt-0.5">
+                    Tools: {filterVisibleTools(c.toolCalls).map((t) => toolLabel(t.name)).join(" · ")}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </main>
@@ -581,6 +616,7 @@ function PhoneShell({
   dangerousCheck,
   transcript,
   onStart,
+  onPauseAudio,
   onEnd,
   onReset,
 }: {
@@ -590,6 +626,7 @@ function PhoneShell({
   dangerousCheck: AnalysisCheck | null;
   transcript: string;
   onStart: () => void;
+  onPauseAudio: () => void;
   onEnd: () => void;
   onReset: () => void;
 }) {
@@ -658,6 +695,7 @@ function PhoneShell({
               check={dangerousCheck}
               callerNumber={callerNumber}
               transcript={transcript}
+              onPauseAudio={onPauseAudio}
               onEnd={onEnd}
             />
           )}
@@ -696,11 +734,13 @@ function DangerOverlay({
   check,
   callerNumber,
   transcript,
+  onPauseAudio,
   onEnd,
 }: {
   check: AnalysisCheck;
   callerNumber: string;
   transcript: string;
+  onPauseAudio: () => void;
   onEnd: () => void;
 }) {
   const critical = check.risk === "critical";
@@ -771,7 +811,10 @@ function DangerOverlay({
 
       <div className="mt-auto flex flex-col gap-2">
         <button
-          onClick={() => setShowFeedback(true)}
+          onClick={() => {
+            onPauseAudio();
+            setShowFeedback(true);
+          }}
           className="bg-red-600 hover:bg-red-500 text-white text-sm font-bold py-3 px-2 rounded-full animate-pulse shadow-lg shadow-red-500/40 leading-tight"
         >
           🛑 HANG UP NOW &amp; BLOCK
