@@ -24,7 +24,7 @@ Scam Sentinel is built to satisfy **four winning frames simultaneously**, not pi
 | 🛡️ **Safety & Trust** | **All analysis is on-device.** Sensitive messages, voice transcripts, emails, and image text never leave the phone. No cloud account, no API key, no signal required. Every verdict is grounded with the exact phrases that triggered it; limits are documented openly. Saved-contact messages are not auto-scanned — only flagged on user request or (roadmap) on stylometric drift, the SIM-swap / hijacked-account second-opinion path. |
 | 📱 **Real-world UX** | In a high-risk situation, Scam Sentinel does not show a small banner — it executes a **full-screen intervention** that physically replaces the scammer's call-to-action with the protective one (Hang up · Block sender · Notify family · 2-min wait timer). The interrupt is the product. |
 
-This is the **Gemma 4 Good Hackathon** submission for **Main Track + Safety & Trust Impact Track**, with concurrent eligibility for **Ollama**, **Unsloth**, and **llama.cpp** Special Technology Tracks.
+This project competes across **three tracks at once** — **Main Track** (best overall), **Safety & Trust Impact Track** (transparent, grounded, explainable AI), and the **Special Technology Tracks** (Ollama, Unsloth, llama.cpp).
 
 > **This is not a final forensic deepfake detector. It is a multimodal scam risk assistant that combines phone-call transcript analysis, conversation patterns, and verification workflows.**
 
