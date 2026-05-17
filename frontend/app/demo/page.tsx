@@ -37,9 +37,7 @@ interface AnalysisCheck {
 const BACKEND = "http://localhost:8000";
 const AUDIO_URL = "/demo_call.mp3";
 const CALLER_NUMBER = "+1-555-0142";
-const ANALYZE_INTERVAL_SEC = 15;
-// Show the big red "HANG UP NOW" overlay only after this many seconds of audio
-const DANGER_OVERLAY_AT_SEC = 35;
+const ANALYZE_INTERVAL_SEC = 20;
 
 type CallState = "idle" | "connected" | "ended";
 
@@ -52,7 +50,6 @@ type CallState = "idle" | "connected" | "ended";
 type ScenarioKey =
   | "live_call"
   | "bec_email"
-  | "package_sms"
   | "chase_sms"
   | "image_smishing"
   | "normal_message";
@@ -69,7 +66,6 @@ interface TextScenario {
 const SCENARIOS: { key: ScenarioKey; label: string; emoji: string }[] = [
   { key: "live_call", emoji: "📞", label: "Live phone call" },
   { key: "bec_email", emoji: "💼", label: "BEC wire fraud (email)" },
-  { key: "package_sms", emoji: "📦", label: "USPS package phishing (SMS)" },
   { key: "chase_sms", emoji: "🏦", label: "Chase bank phish (SMS)" },
   { key: "image_smishing", emoji: "📷", label: "Image smishing (MMS)" },
   { key: "normal_message", emoji: "✅", label: "Normal family message (SMS)" },
@@ -83,14 +79,6 @@ const TEXT_SCENARIOS: Record<Exclude<ScenarioKey, "live_call">, TextScenario> = 
     channel: "email",
     text:
       "Hi, I'm in back-to-back meetings and can't talk. I need you to process an urgent wire transfer of $47,500 to a new vendor account today. Details: Bank of America, routing 026009593, account 4891023476. Do not discuss with other staff. Please confirm once done.",
-  },
-  package_sms: {
-    key: "package_sms",
-    label: "USPS package phishing (SMS)",
-    emoji: "📦",
-    channel: "sms",
-    text:
-      "USPS: Your package delivery was attempted. To reschedule delivery, confirm your address and pay a $3.50 redelivery fee at: usps-redelivery-confirm.com",
   },
   chase_sms: {
     key: "chase_sms",
@@ -122,15 +110,21 @@ const TEXT_SCENARIOS: Record<Exclude<ScenarioKey, "live_call">, TextScenario> = 
     channel: "sms",
     text:
       "Dad, can you send me $40 for groceries? I'll pay you back when I see you Sunday. My Venmo is @jake-miller22",
+    metadata: {
+      // Saved contact in the user's address book → emulator shows the name,
+      // not the phone number, and skips the "unsaved number" warning banner.
+      from_contact: "James (Son)",
+      from_number: "+1 (415) 555-0136",
+    },
   },
 };
 
 const RISK_COLORS: Record<RiskLevel, string> = {
-  safe: "bg-emerald-900/30 border-emerald-500/60 text-emerald-200",
-  low: "bg-yellow-900/30 border-yellow-500/60 text-yellow-200",
-  medium: "bg-orange-900/30 border-orange-500/60 text-orange-200",
-  high: "bg-red-900/40 border-red-500/70 text-red-200",
-  critical: "bg-red-950/60 border-red-400 text-red-100",
+  safe:     "bg-emerald-50 border-emerald-400 text-emerald-900",
+  low:      "bg-yellow-50 border-yellow-400 text-yellow-900",
+  medium:   "bg-orange-50 border-orange-400 text-orange-900",
+  high:     "bg-red-50 border-red-500 text-red-900",
+  critical: "bg-red-100 border-red-600 text-red-950",
 };
 
 function isDangerous(level: RiskLevel | null): boolean {
@@ -150,19 +144,51 @@ function riskEmoji(level: RiskLevel): string {
 //   scammer, so we never surface "call this back" as a recommendation.
 const SUPPRESSED_TOOLS = new Set(["suggest_callback"]);
 
+// iPhone-style status bar icons (signal · WiFi · battery). Rendered as inline
+// SVG so they stay crisp at any zoom without an extra asset.
+function StatusBarIcons() {
+  return (
+    <span className="flex items-center gap-1 text-gray-800">
+      {/* Cellular signal — 4 bars */}
+      <svg width="13" height="9" viewBox="0 0 13 9" fill="currentColor" aria-hidden="true">
+        <rect x="0" y="6" width="2" height="3" rx="0.5" />
+        <rect x="3" y="4" width="2" height="5" rx="0.5" />
+        <rect x="6" y="2" width="2" height="7" rx="0.5" />
+        <rect x="9" y="0" width="2" height="9" rx="0.5" />
+      </svg>
+      {/* WiFi — 3 arcs + dot */}
+      <svg width="13" height="10" viewBox="0 0 16 12" fill="none" aria-hidden="true">
+        <path d="M2 5 A8 8 0 0 1 14 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M4 7 A5 5 0 0 1 12 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M6 9 A2 2 0 0 1 10 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="8" cy="11" r="0.8" fill="currentColor" />
+      </svg>
+      {/* Battery — outline + ~80% fill + nub */}
+      <svg width="22" height="10" viewBox="0 0 24 10" fill="none" aria-hidden="true">
+        <rect x="0.5" y="0.5" width="20" height="9" rx="2" stroke="currentColor" strokeWidth="0.8" />
+        <rect x="2" y="2" width="14" height="6" rx="1" fill="currentColor" />
+        <rect x="21" y="3.5" width="1.5" height="3" rx="0.6" fill="currentColor" />
+      </svg>
+    </span>
+  );
+}
+
 function toolLabel(name: string): string {
+  // These are the tool calls Gemma 4 recommends — not actions that have
+  // actually executed against real telephony / payment APIs. Labels use
+  // imperative or "call" framing to stay honest with the user.
   const map: Record<string, string> = {
-    notify_trusted_contact: "Family alerted",
-    generate_secret_question: "Secret question ready",
-    start_wait_timer: "2-min wait timer started",
-    create_incident_report: "Incident logged",
-    block_payment_intent: "Payment blocked",
-    block_phone_number: "Number blocked",
-    block_email_sender: "Sender blocked",
-    check_url_safety: "URL safety check",
-    verify_image_message: "Image text re-scanned",
-    show_official_contact: "Showing official contact",
-    flag_red_phrases: "Risky phrases flagged",
+    notify_trusted_contact: "Alert a trusted family member",
+    generate_secret_question: "Ask a secret-question to verify",
+    start_wait_timer: "Wait 2 minutes before sending money",
+    create_incident_report: "Log this incident",
+    block_payment_intent: "Block the payment / transfer link",
+    block_phone_number: "Block this caller's number",
+    block_email_sender: "Block this email sender",
+    check_url_safety: "Check the URL for phishing",
+    verify_image_message: "Re-scan text inside the image",
+    show_official_contact: "Use the official contact number",
+    flag_red_phrases: "Quote the risky phrases used",
   };
   return map[name] ?? name;
 }
@@ -178,7 +204,7 @@ function filterVisibleTools<T extends { name: string }>(tools: T[]): T[] {
 export default function VoiceDemoPage() {
   const [selected, setSelected] = useState<ScenarioKey>("live_call");
   return (
-    <div className="flex flex-col h-screen bg-gray-950 text-gray-100 overflow-hidden">
+    <div className="flex flex-col h-screen bg-white text-gray-900 overflow-hidden">
       <ScenarioTabs selected={selected} onSelect={setSelected} />
       <div className="flex-1 overflow-hidden">
         {selected === "live_call" ? (
@@ -199,7 +225,7 @@ function ScenarioTabs({
   onSelect: (k: ScenarioKey) => void;
 }) {
   return (
-    <div className="flex gap-1 px-4 py-2 border-b border-gray-800/60 bg-gray-900/40 overflow-x-auto">
+    <div className="flex gap-1 px-4 py-2 border-b border-gray-200 bg-white overflow-x-auto">
       {SCENARIOS.map((s) => {
         const isActive = s.key === selected;
         return (
@@ -209,7 +235,7 @@ function ScenarioTabs({
             className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition ${
               isActive
                 ? "bg-emerald-600 text-white"
-                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
             {s.emoji} {s.label}
@@ -226,7 +252,6 @@ function LiveCallView() {
   const [visibleCount, setVisibleCount] = useState(0);
   const [fullAnalysis, setFullAnalysis] = useState<AgentOutput | null>(null);
   const [checks, setChecks] = useState<AnalysisCheck[]>([]);
-  const [currentSecond, setCurrentSecond] = useState(0);
   const [status, setStatus] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
@@ -380,18 +405,17 @@ function LiveCallView() {
     function onTimeUpdate() {
       if (!audioEl) return;
       const t = audioEl.currentTime;
-      setCurrentSecond(t);
 
       // Reveal a segment only AFTER it has finished being spoken
       const count = segmentsRef.current.filter((s) => s.end <= t).length;
       setVisibleCount(count);
 
-      // Fire periodic check at each 15s mark + at the DangerOverlay trigger
-      // so the overlay always reflects the latest audible-pattern state.
+      // Fire a periodic check at each 20s mark (20s, 40s, 60s, …). The
+      // ad-hoc DangerOverlay timestamp gate has been removed — checks are
+      // strictly on the interval.
       const triggerSeconds: number[] = [];
       const fixedMark = Math.floor(t / ANALYZE_INTERVAL_SEC) * ANALYZE_INTERVAL_SEC;
       if (fixedMark > 0) triggerSeconds.push(fixedMark);
-      if (t >= DANGER_OVERLAY_AT_SEC) triggerSeconds.push(DANGER_OVERLAY_AT_SEC);
 
       for (const sec of triggerSeconds) {
         if (!analyzedSecondsRef.current.has(sec)) {
@@ -410,7 +434,6 @@ function LiveCallView() {
     setVisibleCount(0);
     setFullAnalysis(null);
     setChecks([]);
-    setCurrentSecond(0);
     setError(null);
     analyzedSecondsRef.current.clear();
     setCallState("connected");
@@ -436,22 +459,20 @@ function LiveCallView() {
     setVisibleCount(0);
     setFullAnalysis(null);
     setChecks([]);
-    setCurrentSecond(0);
     analyzedSecondsRef.current.clear();
   }
 
   const visibleSegments = segments.slice(0, visibleCount);
-  // Only surface the giant red overlay AFTER the audio reaches the configured
-  // trigger time, so the demo's "scam moment" lands on a specific beat.
+  // Surface the giant red overlay the moment any dangerous check arrives.
+  // The check itself only fires on the 20-second interval, so the overlay
+  // timing is paced by the interval — no separate timestamp gate.
   const dangerousCheck =
-    currentSecond >= DANGER_OVERLAY_AT_SEC
-      ? [...checks].reverse().find((c) => isDangerous(c.risk)) ?? null
-      : null;
+    [...checks].reverse().find((c) => isDangerous(c.risk)) ?? null;
 
   return (
-    <main className="flex h-screen bg-gray-950 text-gray-100 overflow-hidden">
+    <main className="flex h-full bg-white text-gray-900 overflow-hidden">
       {/* Left: phone shell */}
-      <div className="flex flex-col items-center justify-center w-[420px] shrink-0 border-r border-gray-800/60 relative">
+      <div className="flex flex-col items-center justify-center w-[420px] shrink-0 border-r border-gray-200 relative">
         <PhoneShell
           callState={callState}
           callerNumber={CALLER_NUMBER}
@@ -467,10 +488,10 @@ function LiveCallView() {
 
       {/* Right: live transcript + analysis history */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="px-6 py-4 border-b border-gray-800/60 flex items-center justify-between">
+        <header className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold">Live call analysis</h1>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               Whisper-base STT · fine-tuned Gemma 4 E2B · risk check every {ANALYZE_INTERVAL_SEC}s
             </p>
           </div>
@@ -486,7 +507,7 @@ function LiveCallView() {
 
         <div className="flex-1 overflow-y-auto p-6 space-y-3">
           {error && (
-            <div className="border border-red-700/60 bg-red-950/40 rounded-md p-3 text-sm text-red-200">
+            <div className="border border-red-400 bg-red-50 rounded-md p-3 text-sm text-red-800">
               {error}
             </div>
           )}
@@ -501,23 +522,23 @@ function LiveCallView() {
           )}
 
           {visibleSegments.length === 0 && callState === "connected" && (
-            <p className="text-sm text-gray-400 animate-pulse">Connecting…</p>
+            <p className="text-sm text-gray-500 animate-pulse">Connecting…</p>
           )}
 
           {visibleSegments.map((s, i) => (
             <div
               key={i}
-              className="border border-gray-800/60 rounded-md px-3 py-2 bg-gray-900/40 animate-in fade-in slide-in-from-bottom-2 duration-300 flex gap-3"
+              className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 animate-in fade-in slide-in-from-bottom-2 duration-300 flex gap-3"
             >
               <div className="text-[10px] text-gray-500 mt-0.5 w-10 shrink-0">
                 {formatTime(s.end)}
               </div>
-              <p className="text-sm text-gray-200 leading-relaxed flex-1">{s.text}</p>
+              <p className="text-sm text-gray-700 leading-relaxed flex-1">{s.text}</p>
             </div>
           ))}
 
           {checks.length > 0 && (
-            <div className="mt-6 space-y-2 border-t border-gray-800/60 pt-4">
+            <div className="mt-6 space-y-2 border-t border-gray-200 pt-4">
               <div className="text-xs uppercase tracking-wider text-gray-500">
                 Gemma 4 risk checks ({checks.length})
               </div>
@@ -576,7 +597,7 @@ function PhoneShell({
     <div className="relative w-[300px] h-[620px] rounded-[44px] bg-white border-[10px] border-gray-900 shadow-2xl overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-7 px-6 flex items-center justify-between text-[10px] text-gray-800 z-20">
         <span>9:41</span>
-        <span>•••</span>
+        <StatusBarIcons />
       </div>
       <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-[90px] h-[26px] rounded-full bg-black z-30" />
 
@@ -703,45 +724,50 @@ function DangerOverlay({
 
   return (
     <div className="absolute inset-0 z-40 backdrop-blur-md flex flex-col px-4 pt-10 pb-6 animate-in fade-in duration-200 bg-gradient-to-b from-red-950 via-red-950/95 to-black">
-      <div className="text-center mb-3">
-        <div className="text-[10px] uppercase tracking-widest mb-1 text-red-300">
+      {/* Fixed header */}
+      <div className="text-center mb-3 shrink-0">
+        <div className="text-[12px] uppercase tracking-widest mb-1 text-red-300">
           🛡️ Scam Sentinel
         </div>
-        <div className="text-lg font-bold text-white">
+        <div className="text-xl font-bold text-white">
           {critical ? "🚨 SCAM CALL" : "⚠️ Likely scam call"}
         </div>
-        <div className="text-[11px] mt-1 text-red-200">
-          Risk: {check.risk.toUpperCase()} · from {callerNumber}
+        <div className="text-[13px] mt-1 text-red-200">
+          <div>Risk: {check.risk.toUpperCase()}</div>
+          <div>from {callerNumber}</div>
         </div>
       </div>
 
-      {check.patterns.length > 0 && (
-        <div className="rounded-lg p-3 mb-3 text-[11px] leading-relaxed bg-red-900/40 border border-red-500/40 text-red-100">
-          <div className="font-semibold mb-1 text-white">Detected patterns</div>
-          <ul className="space-y-0.5">
-            {check.patterns.map((p, i) => (
-              <li key={i}>• {p.replace(/_/g, " ")}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* Scrollable middle */}
+      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+        {check.patterns.length > 0 && (
+          <div className="rounded-lg p-3 mb-3 text-[14px] leading-relaxed bg-red-900/40 border border-red-500/40 text-red-100">
+            <div className="font-semibold mb-1 text-white text-[15px]">Detected patterns</div>
+            <ul className="space-y-1">
+              {check.patterns.map((p, i) => (
+                <li key={i}>• {p.replace(/_/g, " ")}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-      {visibleTools.length > 0 && (
-        <div className="rounded-lg p-3 mb-3 text-[11px] leading-relaxed bg-red-900/30 border border-red-600/30 text-red-100">
-          <div className="font-semibold mb-1 text-white">Auto-actions taken</div>
-          <ul className="space-y-0.5">
-            {visibleTools.slice(0, 6).map((t, i) => (
-              <li key={i}>✓ {toolLabel(t.name)}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+        {visibleTools.length > 0 && (
+          <div className="rounded-lg p-3 mb-3 text-[14px] leading-relaxed bg-red-900/30 border border-red-600/30 text-red-100">
+            <div className="font-semibold mb-1 text-white text-[15px]">Protective steps to take</div>
+            <ul className="space-y-1">
+              {visibleTools.slice(0, 6).map((t, i) => (
+                <li key={i}>▸ {toolLabel(t.name)}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-      {check.message && (
-        <div className="bg-black/30 rounded-lg p-3 mb-3 text-[10px] text-gray-200 leading-relaxed max-h-[140px] overflow-y-auto whitespace-pre-wrap">
-          {check.message}
-        </div>
-      )}
+        {check.message && (
+          <div className="bg-black/30 rounded-lg p-3 mb-3 text-[14px] text-gray-100 leading-relaxed whitespace-pre-wrap">
+            {check.message}
+          </div>
+        )}
+      </div>
 
       <div className="mt-auto flex flex-col gap-2">
         <button
@@ -767,8 +793,8 @@ function NotificationCard({ check }: { check: AnalysisCheck }) {
     <div
       className={`rounded-md p-2 text-[10px] border animate-in fade-in slide-in-from-top-1 duration-300 ${
         dangerous
-          ? "bg-red-950/70 border-red-600/70 text-red-100"
-          : "bg-gray-800/70 border-gray-700/60 text-gray-300"
+          ? "bg-red-100 border-red-500 text-red-900"
+          : "bg-gray-100 border-gray-200 text-gray-700"
       }`}
     >
       <div className="flex items-center justify-between mb-1">
@@ -825,21 +851,10 @@ function TextScenarioView({ scenario }: { scenario: TextScenario }) {
     ? String(scenario.metadata.image_url)
     : null;
 
-  async function openAndScan() {
+  async function runTextScan() {
+    setPhase("scanning");
     setAnalysis(null);
     setError(null);
-    setPhase("opening");
-
-    // Image MMS scenarios pause at a "preview" phase so the user can see the
-    // image + caption text and explicitly tap "Scan this image" — which then
-    // routes through the real /analyze/image endpoint (pytesseract OCR).
-    // Pure text scenarios go straight from opening → scanning → /analyze/text.
-    if (imageUrl) {
-      setTimeout(() => setPhase("preview"), 500);
-      return;
-    }
-
-    setTimeout(() => setPhase("scanning"), 500);
     try {
       const res = await fetch(`${BACKEND}/analyze/text`, {
         method: "POST",
@@ -861,6 +876,31 @@ function TextScenarioView({ scenario }: { scenario: TextScenario }) {
       setError(e instanceof Error ? e.message : String(e));
       setPhase("error");
     }
+  }
+
+  async function openAndScan() {
+    setAnalysis(null);
+    setError(null);
+    setPhase("opening");
+
+    // Saved-contact messages: do NOT auto-scan. The user already trusts this
+    // sender (it's in their address book), so we just open the message and
+    // surface a manual "Scan with Sentinel" button for SIM-swap / hijacked-
+    // account edge cases.
+    if (isSavedContact) {
+      return;
+    }
+
+    // Image MMS scenarios pause at a "preview" phase so the user can see the
+    // image + caption text and explicitly tap "Scan this image" — which then
+    // routes through the real /analyze/image endpoint (pytesseract OCR).
+    // Pure text scenarios go straight from opening → scanning → /analyze/text.
+    if (imageUrl) {
+      setTimeout(() => setPhase("preview"), 500);
+      return;
+    }
+
+    setTimeout(() => runTextScan(), 500);
   }
 
   async function scanImage() {
@@ -909,21 +949,30 @@ function TextScenarioView({ scenario }: { scenario: TextScenario }) {
       : scenario.channel === "voice"
         ? "Voice"
         : "SMS";
+  // If `from_contact` is set, the sender is saved in the user's address book —
+  // the emulator should show the contact name (and skip the "unsaved number"
+  // warning). Otherwise fall back to the raw number (unknown sender).
+  const fromContact = scenario.metadata?.from_contact
+    ? String(scenario.metadata.from_contact)
+    : null;
   const senderLabel =
     scenario.channel === "email"
       ? "ceo@company-corp.net"
-      : scenario.metadata?.from_number
-        ? String(scenario.metadata.from_number)
-        : "+1 (555) 018-7421";
+      : fromContact
+        ? fromContact
+        : scenario.metadata?.from_number
+          ? String(scenario.metadata.from_number)
+          : "+1 (555) 018-7421";
+  const isSavedContact = !!fromContact;
 
   return (
-    <main className="flex h-full bg-gray-950 text-gray-100 overflow-hidden">
+    <main className="flex h-full bg-white text-gray-900 overflow-hidden">
       {/* Left: phone with full-screen takeover stages */}
-      <div className="flex flex-col items-center justify-center w-[420px] shrink-0 border-r border-gray-800/60 p-6">
+      <div className="flex flex-col items-center justify-center w-[420px] shrink-0 border-r border-gray-200 p-6">
         <div className="relative w-[300px] h-[620px] rounded-[44px] bg-white border-[10px] border-gray-900 shadow-2xl overflow-hidden flex flex-col">
           <div className="absolute top-0 left-0 right-0 h-7 px-6 flex items-center justify-between text-[10px] text-gray-800 z-20">
             <span>9:41</span>
-            <span>•••</span>
+            <StatusBarIcons />
           </div>
           <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-[90px] h-[26px] rounded-full bg-black z-30" />
 
@@ -954,22 +1003,58 @@ function TextScenarioView({ scenario }: { scenario: TextScenario }) {
                 </div>
               </button>
 
-              <div className="mt-auto bg-yellow-50 border border-yellow-300 rounded-lg p-2 text-[10px] text-yellow-800 text-center">
-                🛡️ Sender not in your contacts. Tap to open.
+              <div
+                className={`mt-auto rounded-lg p-2 text-[10px] text-center border ${
+                  isSavedContact
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                    : "bg-yellow-50 border-yellow-300 text-yellow-800"
+                }`}
+              >
+                {isSavedContact
+                  ? `🛡️ From a saved contact. Tap to open.`
+                  : `🛡️ Sender not in your contacts. Tap to open.`}
               </div>
             </div>
           )}
 
-          {/* Phase 2 — Opening message (brief preview) */}
+          {/* Phase 2 — Opening message.
+              For UNKNOWN senders, this is a brief flash before auto-scan kicks in.
+              For SAVED CONTACTS, the auto-scan is intentionally skipped — the
+              message just opens, and Sentinel only steps in if the user
+              explicitly taps "Scan with Sentinel" (covers SIM-swap / hijacked
+              family phone edge cases). */}
           {phase === "opening" && (
             <div className="absolute inset-0 flex flex-col bg-white px-4 pt-10 pb-6 animate-in fade-in duration-200">
               <div className="text-[10px] uppercase tracking-widest text-gray-500 mb-2 text-center">
-                {channelIcon} {channelLabel} · from unknown
+                {channelIcon} {channelLabel} {isSavedContact ? "· saved contact" : "· from unknown"}
               </div>
               <div className="text-[11px] text-gray-500 mb-2 text-center">{senderLabel}</div>
               <div className="bg-gray-100 border border-gray-200 rounded-2xl p-3 mb-4 text-[12px] text-gray-900 leading-relaxed whitespace-pre-wrap">
                 {scenario.text}
               </div>
+
+              {isSavedContact && (
+                <div className="mt-auto flex flex-col gap-2">
+                  <div className="text-[10px] text-gray-500 text-center px-2 leading-snug">
+                    Saved contacts aren&apos;t auto-scanned. Tap below only if
+                    something feels off (e.g. SIM-swap or hijacked account).
+                  </div>
+                  <button
+                    type="button"
+                    onClick={runTextScan}
+                    className="w-full py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold"
+                  >
+                    🛡️ Scan with Sentinel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={reset}
+                    className="text-[11px] text-gray-500 hover:text-gray-800 underline"
+                  >
+                    Looks normal — close
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -1088,7 +1173,11 @@ function TextScenarioView({ scenario }: { scenario: TextScenario }) {
                 🛡️ Scam Sentinel
               </div>
               <div className="text-base font-bold text-white text-center leading-snug mb-1">
-                {imageUrl ? "MMS image from unknown" : `${channelLabel} from an unsaved sender`}
+                {imageUrl
+                  ? "MMS image from unknown"
+                  : isSavedContact
+                    ? `Manual scan — ${senderLabel}`
+                    : `${channelLabel} from an unsaved sender`}
               </div>
               <div className="text-[11px] text-blue-200/90 text-center mb-8 px-2">
                 {imageUrl ? (
@@ -1096,6 +1185,12 @@ function TextScenarioView({ scenario }: { scenario: TextScenario }) {
                     Running pytesseract OCR…
                     <br />
                     then fine-tuned Gemma 4 E2B.
+                  </>
+                ) : isSavedContact ? (
+                  <>
+                    You asked for a second opinion on a saved contact.
+                    <br />
+                    Running fine-tuned Gemma 4 E2B…
                   </>
                 ) : (
                   <>
@@ -1151,12 +1246,12 @@ function TextScenarioView({ scenario }: { scenario: TextScenario }) {
 
       {/* Right: status panel */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="px-6 py-4 border-b border-gray-800/60 flex items-center justify-between">
+        <header className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold">
               {scenario.emoji} {scenario.label}
             </h1>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-500 mt-0.5">
               fine-tuned Gemma 4 E2B + QLoRA · /analyze/text
             </p>
           </div>
@@ -1179,24 +1274,39 @@ function TextScenarioView({ scenario }: { scenario: TextScenario }) {
           )}
 
           {phase === "opening" && (
-            <p className="text-sm text-gray-400 animate-pulse">Opening message…</p>
+            <p className="text-sm text-gray-500 animate-pulse">Opening message…</p>
           )}
 
           {phase === "scanning" && (
-            <div className="border border-blue-800/60 bg-blue-950/30 rounded-md p-4 text-sm text-blue-200">
-              <div className="font-semibold text-white mb-1">
-                🛡️ Scanning unsaved-sender content
+            <div className="border border-blue-400 bg-blue-50 rounded-md p-4 text-sm text-blue-900">
+              <div className="font-semibold text-blue-950 mb-1">
+                {isSavedContact
+                  ? `🛡️ Manual second-opinion scan — ${senderLabel}`
+                  : "🛡️ Scanning unsaved-sender content"}
               </div>
               <ul className="space-y-1 text-xs opacity-90">
-                <li>• Sender not in contacts → mandatory scan</li>
-                <li>• Routing text + metadata to fine-tuned Gemma 4 E2B</li>
-                <li>• Phone is blocked from any action until verdict returns</li>
+                {isSavedContact ? (
+                  <>
+                    <li>• Saved contact — user-triggered scan only</li>
+                    <li>
+                      • Checking for SIM-swap / hijacked-account signals
+                      (urgency, secrecy, payment requests)
+                    </li>
+                    <li>• Routing text + metadata to fine-tuned Gemma 4 E2B</li>
+                  </>
+                ) : (
+                  <>
+                    <li>• Sender not in contacts → mandatory scan</li>
+                    <li>• Routing text + metadata to fine-tuned Gemma 4 E2B</li>
+                    <li>• Phone is blocked from any action until verdict returns</li>
+                  </>
+                )}
               </ul>
             </div>
           )}
 
           {phase === "error" && error && (
-            <div className="border border-red-700/60 bg-red-950/40 rounded-md p-3 text-sm text-red-200">
+            <div className="border border-red-400 bg-red-50 rounded-md p-3 text-sm text-red-800">
               {error}
             </div>
           )}
@@ -1225,14 +1335,14 @@ function TextScenarioView({ scenario }: { scenario: TextScenario }) {
               </div>
 
               {filterVisibleTools(analysis.tool_calls).length > 0 && (
-                <div className="border border-gray-800/60 rounded-md p-4 bg-gray-900/40">
-                  <div className="text-xs uppercase tracking-wider text-gray-400 mb-2">
-                    Auto-actions ({filterVisibleTools(analysis.tool_calls).length})
+                <div className="border border-gray-200 rounded-md p-4 bg-gray-50">
+                  <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">
+                    Protective steps Gemma 4 called for ({filterVisibleTools(analysis.tool_calls).length})
                   </div>
                   <ul className="space-y-1 text-sm">
                     {filterVisibleTools(analysis.tool_calls).map((t, i) => (
                       <li key={i} className="flex items-baseline gap-2">
-                        <span className="text-emerald-400">✓</span>
+                        <span className="text-emerald-600">▸</span>
                         <span>{toolLabel(t.name)}</span>
                         <span className="text-xs text-gray-500 ml-auto">{t.name}</span>
                       </li>
@@ -1403,15 +1513,16 @@ function ResultTakeover({
           : "bg-gradient-to-b from-emerald-950 via-emerald-950/90 to-black"
       }`}
     >
-      <div className="text-center mb-3">
+      {/* Fixed header — always visible */}
+      <div className="text-center mb-3 shrink-0">
         <div
-          className={`text-[10px] uppercase tracking-widest mb-1 ${
+          className={`text-[12px] uppercase tracking-widest mb-1 ${
             dangerous ? "text-red-300" : "text-emerald-300"
           }`}
         >
           🛡️ Scam Sentinel
         </div>
-        <div className="text-lg font-bold text-white">
+        <div className="text-xl font-bold text-white">
           {critical
             ? `🚨 SCAM ${channelLabel.toUpperCase()}`
             : dangerous
@@ -1419,57 +1530,61 @@ function ResultTakeover({
               : "✅ Looks normal"}
         </div>
         <div
-          className={`text-[11px] mt-1 ${
+          className={`text-[13px] mt-1 ${
             dangerous ? "text-red-200" : "text-emerald-200"
           }`}
         >
-          Risk: {analysis.risk_level.toUpperCase()} · from {senderLabel}
+          <div>Risk: {analysis.risk_level.toUpperCase()}</div>
+          <div>from {senderLabel}</div>
         </div>
       </div>
 
-      {analysis.patterns.length > 0 && (
-        <div
-          className={`rounded-lg p-3 mb-3 text-[11px] leading-relaxed ${
-            dangerous
-              ? "bg-red-900/40 border border-red-500/40 text-red-100"
-              : "bg-emerald-900/30 border border-emerald-500/30 text-emerald-100"
-          }`}
-        >
-          <div className="font-semibold mb-1 text-white">Detected patterns</div>
-          <ul className="space-y-0.5">
-            {analysis.patterns.map((p, i) => (
-              <li key={i}>• {p.replace(/_/g, " ")}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {visibleTools.length > 0 && (
-        <div
-          className={`rounded-lg p-3 mb-3 text-[11px] leading-relaxed ${
-            dangerous
-              ? "bg-red-900/30 border border-red-600/30 text-red-100"
-              : "bg-emerald-900/20 border border-emerald-600/30 text-emerald-100"
-          }`}
-        >
-          <div className="font-semibold mb-1 text-white">
-            {dangerous ? "Auto-actions taken" : "No actions needed"}
-          </div>
-          {dangerous && (
-            <ul className="space-y-0.5">
-              {visibleTools.slice(0, 6).map((t, i) => (
-                <li key={i}>✓ {toolLabel(t.name)}</li>
+      {/* Scrollable middle — patterns + tools + plain-language explanation */}
+      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+        {analysis.patterns.length > 0 && (
+          <div
+            className={`rounded-lg p-3 mb-3 text-[14px] leading-relaxed ${
+              dangerous
+                ? "bg-red-900/40 border border-red-500/40 text-red-100"
+                : "bg-emerald-900/30 border border-emerald-500/30 text-emerald-100"
+            }`}
+          >
+            <div className="font-semibold mb-1 text-white text-[15px]">Detected patterns</div>
+            <ul className="space-y-1">
+              {analysis.patterns.map((p, i) => (
+                <li key={i}>• {p.replace(/_/g, " ")}</li>
               ))}
             </ul>
-          )}
-        </div>
-      )}
+          </div>
+        )}
 
-      {analysis.user_message && (
-        <div className="bg-black/30 rounded-lg p-3 mb-3 text-[10px] text-gray-200 leading-relaxed max-h-[140px] overflow-y-auto whitespace-pre-wrap">
-          {analysis.user_message}
-        </div>
-      )}
+        {visibleTools.length > 0 && (
+          <div
+            className={`rounded-lg p-3 mb-3 text-[14px] leading-relaxed ${
+              dangerous
+                ? "bg-red-900/30 border border-red-600/30 text-red-100"
+                : "bg-emerald-900/20 border border-emerald-600/30 text-emerald-100"
+            }`}
+          >
+            <div className="font-semibold mb-1 text-white text-[15px]">
+              {dangerous ? "Protective steps to take" : "No actions needed"}
+            </div>
+            {dangerous && (
+              <ul className="space-y-1">
+                {visibleTools.slice(0, 6).map((t, i) => (
+                  <li key={i}>▸ {toolLabel(t.name)}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {analysis.user_message && (
+          <div className="bg-black/30 rounded-lg p-3 mb-3 text-[14px] text-gray-100 leading-relaxed whitespace-pre-wrap">
+            {analysis.user_message}
+          </div>
+        )}
+      </div>
 
       <div className="mt-auto flex flex-col gap-2">
         {dangerous ? (

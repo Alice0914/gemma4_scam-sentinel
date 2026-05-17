@@ -398,7 +398,18 @@ class ScamReasoningAgent:
         # 3. Remove hallucinated non-Latin characters / scripts.
         s = cls._HALLUCINATED_SCRIPT_RE.sub("", s)
 
-        # 4. Collapse stray whitespace artefacts created by removal.
+        # 4. Strip emphasis markup the model sometimes emits. The UI renders
+        # user_message with `whitespace-pre-wrap` (no HTML), so raw <strong>,
+        # <em>, <b>, <i> tags and Markdown asterisks would appear as literal
+        # characters. We pad single spaces around the removal site so adjacent
+        # words don't collide (e.g. "is<strong>urgently</strong>asking").
+        s = re.sub(r"</?(?:strong|b|em|i|u|mark|span)\b[^>]*>", " ", s, flags=re.IGNORECASE)
+        s = re.sub(r"\*\*(.+?)\*\*", r"\1", s)
+        s = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"\1", s)
+        s = re.sub(r"__(.+?)__", r"\1", s)
+        s = re.sub(r"`([^`]+?)`", r"\1", s)
+
+        # 5. Collapse stray whitespace artefacts created by removal.
         s = re.sub(r"[ \t]+", " ", s)
         s = re.sub(r"\n{3,}", "\n\n", s)
         s = re.sub(r"^\s*[:,\-–—]\s*", "", s, flags=re.MULTILINE)

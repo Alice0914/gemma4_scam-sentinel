@@ -4,7 +4,7 @@
 
 - **Scam Sentinel is an on-device panic-interruption system for scam prevention.**
 - It uses a **fine-tuned Gemma 4 E2B** model to analyze SMS, email, voice-call transcripts, and MMS image text **locally**.
-- When risk is high, it **takes over the full phone screen**, explains the danger in plain language, and triggers protective tools — blocking, trusted-contact alerts, callback verification, and a 2-minute wait timer.
+- When risk is high, it **takes over the full phone screen**, explains the danger in plain language, and calls a curated set of protective tools — block this caller, alert a trusted contact, ask a verification question, start a 2-minute wait timer. The model emits the tool calls; on a real phone the OS executes them, in the demo the UI surfaces them as the protective steps the user should take.
 - The fine-tuned model achieves **98.0% precision** and reduces **false positives to 1.1%** on a 300-sample real-world evaluation set.
 - The goal is simple: **stop the user before they panic-click, panic-reply, or panic-send money.**
 
@@ -21,7 +21,7 @@ Scam Sentinel is built to satisfy **four winning frames simultaneously**, not pi
 |---|---|
 | 🎯 **Product impact** | Tackles a problem where older adults and vulnerable populations actually lose money — **$2.9 B from Americans 60+ in 2024 (FTC)**, **$10 B total**, **$1 T+ globally**. Targets the demographic least likely to install paid cloud protection. |
 | 🧠 **Technical depth** | QLoRA fine-tune of **Gemma 4 E2B** via Unsloth + TRL. Drives F1 from **58.0 → 86.1** and **FPR from 97.7% → 1.1%** vs. the same-size base — a **+28.1 F1 pt** gain and **88× FPR reduction** on a 300-sample real-world test set. Full reproducible pipeline: Colab L4 SFT → WSL2 merge → llama.cpp GGUF → Ollama Hub. |
-| 🛡️ **Safety & Trust** | **All analysis is on-device.** Sensitive messages, voice transcripts, emails, and image text never leave the phone. No cloud account, no API key, no signal required. Every verdict is grounded with the exact phrases that triggered it; limits are documented openly. |
+| 🛡️ **Safety & Trust** | **All analysis is on-device.** Sensitive messages, voice transcripts, emails, and image text never leave the phone. No cloud account, no API key, no signal required. Every verdict is grounded with the exact phrases that triggered it; limits are documented openly. Saved-contact messages are not auto-scanned — only flagged on user request or (roadmap) on stylometric drift, the SIM-swap / hijacked-account second-opinion path. |
 | 📱 **Real-world UX** | In a high-risk situation, Scam Sentinel does not show a small banner — it executes a **full-screen intervention** that physically replaces the scammer's call-to-action with the protective one (Hang up · Block sender · Notify family · 2-min wait timer). The interrupt is the product. |
 
 This is the **Gemma 4 Good Hackathon** submission for **Main Track + Safety & Trust Impact Track**, with concurrent eligibility for **Ollama**, **Unsloth**, and **llama.cpp** Special Technology Tracks.
@@ -57,7 +57,7 @@ This is the **Gemma 4 Good Hackathon** submission for **Main Track + Safety & Tr
    - `POST /feedback` — async 👍 / 👎 event log for the Self-Improving Cascade
 3. **Pre-processing** — for voice, Whisper-base STT (≈ 150 MB) transcribes audio → text + per-sentence timestamps. It stays loaded on the same GPU as the reasoner so there is no model swap cost.
 4. **Reasoning (GPU)** — every request lands on **the same model**: fine-tuned Gemma 4 E2B + QLoRA, merged into the base and quantized to Q4_K_M GGUF (3.2 GB), served locally via Ollama as `gemma4-scam`. F1 86.1% / FPR 1.1% on the 300-sample real test set. No Stage 1 / Stage 2 cascade.
-5. **Action Layer — 12 protective tools** — the model emits structured JSON containing `risk_level`, `patterns[]`, a plain-language `user_message`, and a curated subset of 12 tool calls (6 verification + 6 channel defense). The frontend renders each tool's outcome alongside the phone-screen takeover.
+5. **Action Layer — 12 protective tool calls** — the model emits structured JSON containing `risk_level`, `patterns[]`, a plain-language `user_message`, and a curated subset of 12 tool calls (6 verification + 6 channel defense). These are Gemma 4's *recommendations* — on a real mobile deployment the OS executes them (call blocklist, payment-app intercept, contacts push); in this demo the UI renders them as a checklist of "protective steps to take" so the user always knows what the model thinks should happen next.
 6. **Feedback path** — every verdict gets a 👍 / 👎 button. Events stream back to `/feedback` and feed the Self-Improving Cascade below.
 
 All five steps run on the user's local GPU. No cloud inference, no transcript or message leaves the machine at demo time — the privacy stance is the deployment shape, not a promise.
@@ -105,7 +105,7 @@ For every suspicious input, Scam Sentinel answers four questions:
 3. **What should I do right now?**
 4. **How do I verify with my family?**
 
-Output is structured: a risk level, a plain-language explanation, the scam patterns detected, and a list of concrete protective actions taken automatically via function calling.
+Output is structured: a risk level, a plain-language explanation, the scam patterns detected, and a list of concrete protective steps the model recommends via function calling. On a real mobile deployment the OS would carry out these steps automatically; in the current demo the UI surfaces them as a checklist of what the model wants done.
 
 ---
 
@@ -122,7 +122,7 @@ Output is structured: a risk level, a plain-language explanation, the scam patte
 
 ### 2. Twelve protective tools (function calling)
 
-Every Gemma 4 verdict at risk ≥ medium triggers a curated subset of these 12 tools — each backed by a real-world action plan:
+Every Gemma 4 verdict at risk ≥ medium produces a curated subset of these 12 tool calls — each one a concrete protective step backed by a real-world action plan. The model emits the call; on a real mobile deployment the OS would execute it (CallKit / Messages blocklist, contacts push, payment-app intercept). In the current web demo the UI renders them as the protective steps the user should take next:
 
 **Original 6:**
 1. `notify_trusted_contact` — Push alert to a registered family member
@@ -142,7 +142,7 @@ Every Gemma 4 verdict at risk ≥ medium triggers a curated subset of these 12 t
 
 ### 3. Six demo scenarios (one-tap reproducible)
 
-| Scenario | Channel | Tools triggered |
+| Scenario | Channel | Tool calls Gemma 4 makes |
 |---|---|---|
 | 👴 Grandparent scam | voice | block_phone, callback, secret question, wait timer, flag phrases, notify family |
 | 💼 BEC wire fraud | email | block_email, official_contact (Bank of America), block_payment, flag phrases |
@@ -514,6 +514,7 @@ The baseline that was originally listed here ("split SFT to Colab, serve locally
 2. **Recover recall lost to precision-first calibration** — fine-tuning dropped recall 96.8% → 76.8%. The Self-Improving Cascade (Loop A: prompt rewrites from false alarms; Loop B: DPO from confirmed misses) is the recovery mechanism — see [docs/diagrams/03_self_improving_cascade.mmd](docs/diagrams/03_self_improving_cascade.mmd).
 3. **Mobile-native deployment** — the Q4_K_M GGUF (3.2 GB) is small enough for LiteRT / MediaPipe LLM Inference API on flagship Android (8 GB+ RAM). The current demo is web-only on a desktop with discrete GPU; on-device mobile inference is the next privacy boundary.
 4. **Re-enable RAG once curated** — the 117-case index hurt on the 300-sample test set because the cases skew toward scam summaries, biasing retrievals when the query is benign. A category-balanced index (50% scam / 50% benign exemplars) is needed before RAG comes back online by default.
+5. **Stylometric baseline per saved contact (SIM-swap / hijacked-account detection)** — for messages from a saved contact, build a per-contact writing-style fingerprint from message history (n-gram distributions, sentence-length distribution, emoji usage, time-of-day patterns, sentence embeddings) and flag the message when it deviates from baseline beyond a tuned threshold. Today the demo opens saved-contact messages without auto-scanning and exposes a manual "Scan with Sentinel" button as the user-triggered fallback; the stylometric layer would turn that into an automatic second opinion when behavior drifts, catching SIM-swap and account-hijack scams the current text-only classifier alone cannot.
 
 ---
 
