@@ -1,9 +1,17 @@
 """
 Local inference for the fine-tuned Gemma 4 E2B + QLoRA adapter.
 
+OPTIONAL FALLBACK PATH. Production runs the model through Ollama
+(`gemma4-scam`, merged + Q4_K_M GGUF) — see backend/reasoning_agent.py.
+This module is only loaded when Ollama is unavailable, or for parity
+testing against the in-process PEFT path. backend/main.py wraps the
+import in try/except and silently falls back to Ollama on any failure
+(typical on Windows because of bitsandbytes / triton compatibility).
+
 Loads `Alice0914/gemma4-e2b-scam-sentinel` (LoRA adapter) on top of the
-matching `unsloth/gemma-4-E2B-it-unsloth-bnb-4bit` (pre-quantized 4-bit base)
-via Unsloth. The whole stack is already 4-bit so it fits in ~3.5 GB VRAM.
+matching `unsloth/gemma-4-E2B-it-unsloth-bnb-4bit` (pre-quantized 4-bit
+base) via Unsloth. The whole stack is already 4-bit so it fits in
+~3.5 GB VRAM.
 """
 from __future__ import annotations
 

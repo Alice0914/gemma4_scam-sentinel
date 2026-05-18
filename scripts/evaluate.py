@@ -2,12 +2,16 @@
 Evaluate Scam Sentinel across multiple models on the hand-labeled eval set.
 
 Usage:
-    python scripts/evaluate.py --model gemma4 --output results/track_a.json
-    python scripts/evaluate.py --model gemma4 --rag --output results/track_a_rag.json
-    python scripts/evaluate.py --model gemma3:4b --output results/track_light.json
-    python scripts/evaluate.py --model gemma3:4b --rag --output results/track_light_rag.json
+    # Production: fine-tuned Gemma 4 E2B + QLoRA (the model on Ollama Hub)
+    python scripts/evaluate.py --model gemma4-scam --output results/production.json
 
-    python scripts/evaluate.py --compare results/track_a.json results/track_a_rag.json results/track_light.json results/track_light_rag.json
+    # Legacy baselines (kept for the README "How we got here" section)
+    python scripts/evaluate.py --model gemma3:4b --output results/eval300_gemma3.json
+    python scripts/evaluate.py --model gemma3:4b --rag --output results/eval300_gemma3_rag.json
+    python scripts/evaluate.py --model gemma4 --output results/eval300_gemma4_v3.json
+
+    # Compare any set of result files
+    python scripts/evaluate.py --compare results/production.json results/eval300_gemma3.json
 """
 
 import json

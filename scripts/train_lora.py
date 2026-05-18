@@ -1,10 +1,17 @@
 """
-LoRA fine-tuning for Scam Sentinel using PEFT + transformers (Windows compatible).
-Target model: google/gemma-3-4b-it
+Alternative LoRA fine-tuning entry point (PEFT + transformers, Windows-friendly).
+
+NOTE: This is NOT the path that produced the shipped production model.
+The production fine-tune (Gemma 4 E2B + QLoRA, F1 86.1% / FPR 1.1%) was
+trained via Unsloth on Colab Pro L4 — see `finetune_gemma4_e2b.ipynb`.
+This script remains as a fallback / reference for the Gemma 3 4B base
+and for users without Unsloth + GPU access. Override `--model` to target
+a different base.
 
 Usage:
     python scripts/train_lora.py
-    python scripts/train_lora.py --max-samples 500  # quick test run
+    python scripts/train_lora.py --max-samples 500  # quick smoke run
+    python scripts/train_lora.py --model google/gemma-4-E2B-it  # alt base
 """
 
 import json

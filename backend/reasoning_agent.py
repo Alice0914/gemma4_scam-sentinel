@@ -17,10 +17,12 @@ from backend.tools import execute_tool_call, ToolResult
 OLLAMA_GENERATE_URL = "http://localhost:11434/api/generate"
 OLLAMA_CHAT_URL = "http://localhost:11434/api/chat"
 
-# Hybrid cascade: a fast small model decides "is this safe?" and a deep model
-# does the plain-language reasoning + function calling only when needed.
-FAST_MODEL = "gemma3:4b"
-DEEP_MODEL = "gemma4-scam"
+# Production runtime is the single fine-tuned model `gemma4-scam` (Gemma 4
+# E2B + QLoRA, merged → Q4_K_M GGUF, served via Ollama). The legacy hybrid
+# cascade (FAST_MODEL triage → DEEP_MODEL deep reasoner) is retained only
+# for evaluation-parity runs; all production endpoints pass use_cascade=False.
+FAST_MODEL = "gemma3:4b"   # legacy triage model, off by default
+DEEP_MODEL = "gemma4-scam"  # production reasoner
 
 SYSTEM_PROMPT_PATH = Path("backend/prompts/system_prompt.md")
 FAST_CLASSIFIER_PROMPT_PATH = Path("backend/prompts/fast_classifier.md")
@@ -662,19 +664,23 @@ class ScamReasoningAgent:
         """
         Analyze signals and return structured output.
 
-        Hybrid cascade (default):
+        Production runtime (every endpoint in main.py): single fine-tuned
+        Gemma 4 E2B + QLoRA model, no cascade, no RAG. Callers pass
+        `use_cascade=False`.
+
+        Legacy hybrid cascade (use_cascade=True, retained for eval parity):
             Stage 1 — Gemma 3 4B fast classifier returns risk_level only.
-            Stage 2 — If "safe", short-circuit. Otherwise Gemma 4 produces the
-                      plain-language reasoning, tool_calls, and user_message.
-            This mirrors the eval finding (gemma3:4b is the stronger classifier;
-            gemma4 is the stronger reasoner with native function calling).
+            Stage 2 — If "safe", short-circuit. Otherwise the deep reasoner
+                      produces plain-language reasoning, tool_calls, and
+                      user_message.
+            The cascade default in the function signature is kept True so
+            evaluation scripts that exercise the historical path do not
+            need to pass an extra flag.
 
-        Set use_cascade=False to skip Stage 1 (e.g. for evaluation parity).
-
-        RAG is OFF by default. The 300-sample eval showed retrieved FTC cases
-        bias the model toward false positives on conversational ham. Pass
-        `use_rag=True` to enable retrieval; it has no effect if no retriever
-        was injected at agent construction (rag_retriever=None).
+        RAG is OFF by default. The 300-sample eval showed retrieved FTC
+        cases bias the model toward false positives on conversational ham.
+        Pass `use_rag=True` to enable retrieval; it has no effect if no
+        retriever was injected at agent construction (rag_retriever=None).
         """
         # ── Stage 1: fast classify with Gemma 3 ──────────────────────────
         if use_cascade:

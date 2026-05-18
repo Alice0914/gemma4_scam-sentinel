@@ -15,7 +15,6 @@ from backend.reasoning_agent import (
     ScamReasoningAgent,
     SignalInput,
     AgentOutput,
-    FAST_MODEL,
     DEEP_MODEL,
 )
 

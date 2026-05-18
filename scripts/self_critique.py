@@ -14,13 +14,14 @@ Typical use:
     python scripts/self_critique.py --apply
 
 Design notes:
-- Targets `backend/prompts/system_prompt.md` (Gemma 4 deep reasoner) since that
-  is where the eval shows the biggest calibration headroom.
-- Only false-alarm entries where the predicted risk was NOT "safe" are used,
-  because "safe" predictions come from the fast classifier (Stage 1 short
-  circuit) — those would belong to a sibling Loop A targeting fast_classifier.md.
-- Eval defaults to 50 stratified samples for speed (~5 min). Use --full for the
-  whole 300-sample set when running on a schedule.
+- Targets `backend/prompts/system_prompt.md` (the single-model fine-tuned
+  Gemma 4 reasoner used in production) since that is where the eval shows
+  the biggest calibration headroom.
+- Only false-alarm entries where the predicted risk was NOT "safe" are
+  analyzed — a "safe" prediction means the model produced no warning, so
+  there is nothing to revise.
+- Eval defaults to 50 stratified samples for speed (~5 min). Use --full for
+  the whole 300-sample set when running on a schedule.
 """
 
 from __future__ import annotations
