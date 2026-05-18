@@ -1,6 +1,6 @@
 # Notebooks containing tokens or credentials
-finetune_gemma4_e2b.ipynb
-finetune_*.ipynb
+notebooks/finetune_gemma4_e2b.ipynb
+notebooks/finetune_*.ipynb
 
 # Model weights and adapters
 models/
@@ -43,6 +43,10 @@ videos/
 
 # Build / framework caches
 unsloth_compiled_cache/
+
+# Claude Code project context (local dev only — not part of the public repo)
+CLAUDE.md
+**/CLAUDE.md
 
 # IDE / agent
 .vscode/

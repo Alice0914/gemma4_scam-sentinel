@@ -423,9 +423,9 @@ The backend (`backend/reasoning_agent.py` → `DEEP_MODEL = "gemma4-scam"`) talk
 
 ```
 scam-sentinel/
-├── CLAUDE.md                       # Source of truth for design decisions
 ├── README.md                       # this file
-├── finetune_gemma4_e2b.ipynb       # Colab notebook used for the SFT QLoRA run
+├── notebooks/
+│   └── finetune_gemma4_e2b.ipynb   # Colab notebook used for the SFT QLoRA run
 ├── backend/                        # FastAPI + reasoning agent + 12 tools
 │   ├── main.py                    # endpoints: /health, /analyze/{text,image,voice,voice_chunk,voice_full}, /feedback
 │   ├── reasoning_agent.py         # Ollama client + user_message cleaner + tool inference
