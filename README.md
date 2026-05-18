@@ -28,7 +28,7 @@ This project competes across **three tracks at once** — **Main Track** (best o
 
 ### Links
 
-- 🎬 **3-minute demo video (YouTube)**: <https://youtu.be/nOHGK9eKe3w>
+- 🎬 **3-minute demo video (YouTube)**: <https://youtu.be/0CRrEQjc-84>
 - 💻 **Code repository**: <https://github.com/Alice0914/gemma4_scam-sentinel>
 - 🤖 **LoRA adapter (HuggingFace)**: <https://huggingface.co/Alice0914/gemma4-e2b-scam-sentinel>
 - 📦 **Quantized model (Ollama Hub)**: <https://ollama.com/alicek0914/gemma4-scam>
